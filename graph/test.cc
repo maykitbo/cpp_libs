@@ -1,37 +1,32 @@
-#include "graph.h"
+#include <unordered_map>
 
-#include "../utility/sstr.h"
-#include "../utility/time.h"
-#include "../utility/random.h"
-
+#include <iostream>
 #include <vector>
+#include <list>
 
-#include <random>
+#include "../utility/time.h"
 
 using namespace s21;
 
 int main() {
-    int layers = 3;
-
-    Graph<std::string, float> G(layers);
-
-    for (int k = 0; k < layers; ++k) {
-        for (int g = 0; g < (k + 1) * 2; ++g) {
-            G.AddNode(Sstr(k, " ", g), k);
-        }
+    std::unordered_map<int, int> um;
+    for (int k = 0; k < 5000000; ++k) {
+        um.insert({k, 0});
     }
+    std::vector<int> V(5000000);
+    std::list<int> L(5000000);
 
-    for (int k = 0; k < layers - 1; ++k) {
-        for (auto &source : G.GetNodes(k)) {
-            for (auto &destination : G.GetNodes(k + 1)) {
-                G.AddEdge(source, destination, Random::Normal(0, 1));
-            }
-        }
-    }
+    auto T = Time::Now();
+    for (auto &i : um) {}
+    std::cout << Time::Duration(T) << "\n";
 
-    G.Print();
-    G.Update();
-    G.Print();
+    T = Time::Now();
+    for (auto &i : V) {}
+    std::cout << Time::Duration(T) << "\n";
+
+    T = Time::Now();
+    for (auto &i : L) {}
+    std::cout << Time::Duration(T) << "\n";
 
     return 0;
 }

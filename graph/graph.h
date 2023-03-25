@@ -6,13 +6,6 @@
 
 #include <unordered_map>
 
-struct func {
-    static bool bad_edge(float w) {
-        if (w > 1 || w < -1) return true;
-        return false;
-    }
-};
-
 
 template<class node_type, class edge_type>
 class Node;
@@ -64,16 +57,6 @@ class Node {
         const node_type &GetData() const {
             return data_;
         }
-        void Update() {
-            for (auto iter = input_.begin(); iter != input_.end(); ) {
-                if (func::bad_edge((*iter)->GetData())) {
-                    (*iter)->GetSource().output_.erase(*iter);
-                    iter = input_.erase(iter);
-                } else {
-                    ++iter;
-                }
-            }
-        }
 
         void Print() const {
             std::cout << "Node data = " << data_ << ":\nInput from nodes & edge data: ";
@@ -109,9 +92,7 @@ class Graph {
             node.SetData(node_data);
         }
 
-        void AddEdge(node_t &source, node_t &destination, edge_type edge_data) {
-            destination.AddInput(source.AddOutput(destination, edge_data));
-        }
+        virtual void AddEdge(node_t &source, node_t &destination, edge_type edge_data) = 0;
 
         std::list<node_t> &GetNodes(int group = 0) {
             return groups_[group];
@@ -127,14 +108,25 @@ class Graph {
                 }
             }
         }
-
-        void Update() {
-            for (auto &group: groups_) {
-                for (auto &node: group) {
-                    node.Update();
-                }
-            }
-        }
-
 };
 
+template<class node_type, class edge_type>
+class DirectedGraph : public Graph<node_type, edge_type> {
+    public:
+        DirectedGraph(int groups_count = 1) noexcept : Graph<node_type, edge_type>(groups_count) {}
+
+        void AddEdge(node_t &source, node_t &destination, edge_type edge_data) override {
+            source.AddOutput(destination, edge_data);
+        }
+};
+
+
+template<class node_type, class edge_type>
+class UndirectedGraph : public Graph<node_type, edge_type> {
+    public:
+        UndirectedGraph(int groups_count = 1) noexcept : Graph<node_type, edge_type>(groups_count) {}
+
+        void AddEdge(node_t &source, node_t &destination, edge_type edge_data) override {
+            destination.AddInput(source.AddOutput(destination, edge_data));
+        }
+};
