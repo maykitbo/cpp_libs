@@ -11,8 +11,20 @@ namespace s21 {
 
 template<class T>
 class Matrix {
-    std::unique_ptr<T[]> matrix_;
-    size_t rows_, cols_;
+    private:
+        std::unique_ptr<T[]> matrix_;
+        size_t rows_, cols_;
+
+        class RowProxy {
+            Matrix<T>& matrix_;
+            size_t row_;
+            public:
+                RowProxy(Matrix<T>& matrix, size_t row) : matrix_(matrix), row_(row) {}
+                T& operator[](size_t col) {
+                    return matrix_(row_, col);
+                }
+        };
+
     public:
         void Loop(std::function<void(int, int)> func) {
             for (int k = 0; k < rows_; ++k) {
@@ -21,6 +33,7 @@ class Matrix {
                 }
             }
         }
+
         Matrix() noexcept : rows_(0), cols_(0) {}
         Matrix(int rows, int cols) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]()) {}
         Matrix(int rows, int cols, const T value) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
@@ -49,18 +62,32 @@ class Matrix {
                 ++k;
             }
         }
+        Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), matrix_(std::move(other.matrix_)) {
+            other.matrix_ = nullptr;
+            other.rows_ = 0;
+            other.cols_ = 0;
+        }
+
+        RowProxy operator[](size_t row) {
+            return RowProxy(*this, row);
+        }
+        T &operator()(size_t row, size_t col) {
+            return matrix_[row * cols_ + col];
+        }
+        const T &operator()(size_t row, size_t col) const {
+            return matrix_[row * cols_ + col];
+        }
+
         void Resize(size_t new_rows, size_t new_cols) {
-            std::unique_ptr<T[]> new_matrix(new T[new_rows * new_cols]());
+            Matrix<T> new_matrix(new_rows, new_cols);
             int min_rows = std::min(rows_, new_rows);
             int min_cols = std::min(cols_, new_cols);
             for (int k = 0; k < min_rows; ++k) {
                 for (int g = 0; g < min_cols; ++g) {
-                    new_matrix[k * new_cols + g] = matrix_[k * cols_ + g];
+                    new_matrix(k, g) = matrix_[k * cols_ + g];
                 }
             }
-            matrix_ = std::move(new_matrix);
-            rows_ = new_rows;
-            cols_ = new_cols;
+            *this = std::move(new_matrix);
         }
         void ResizeRows(size_t new_rows) {
             Resize(new_rows, cols_);
@@ -68,11 +95,7 @@ class Matrix {
         void ResizeCols(size_t new_cols) {
             Resize(rows_, new_cols);
         }
-        Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), matrix_(std::move(other.matrix_)) {
-            other.matrix_ = nullptr;
-            other.rows_ = 0;
-            other.cols_ = 0;
-        }
+
         Matrix& operator=(const Matrix& other) {
             if (this != &other) {
                 Matrix temp(other);
@@ -88,18 +111,14 @@ class Matrix {
             std::swap(matrix_, other.matrix_);
             return *this;
         }
+
         void ForEach(std::function<void(const T&)> func) const {
             Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
         }
         void Fill(std::function<void(T&)> func) {
             Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
         }
-        T &operator()(int row, int col) {
-            return matrix_[row * cols_ + col];
-        }
-        const T &operator()(int row, int col) const {
-            return matrix_[row * cols_ + col];
-        }
+
         const T &Get(int row, int col) const {
             return matrix_[row * cols_ + col];
         }
@@ -115,6 +134,7 @@ class Matrix {
         size_t GetCols() const {
             return cols_;
         }
+
         Matrix operator*(const double num) const {
             return Matrix(rows_, cols_, [&] (T &cell, int k, int g) { cell = matrix_[k * cols_ + g] * num; });
         }
@@ -164,6 +184,7 @@ class Matrix {
             }
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] -= other(k, g); });
         }
+
         Matrix Transpose() const {
             return Matrix(cols_, rows_, [&] (T &cell, int k, int g) {
                 cell = matrix_[g * cols_ + k];
@@ -173,6 +194,7 @@ class Matrix {
             auto temp = *this;
             *this = temp.Transpose();
         }
+
         bool operator==(const Matrix &other) const {
             if (cols_ != other.cols_ || rows_ != other.rows_) return false;
             for (int k = 0; k < rows_; ++k) {
@@ -187,6 +209,7 @@ class Matrix {
         bool operator!=(Matrix &other) {
             return !operator==(other);
         }
+
         Matrix Minor(int row, int col) {
             Matrix res(rows_ - 1, cols_ - 1);
             int i = 0, j;
@@ -243,6 +266,7 @@ class Matrix {
             }
             return det;
         }
+
         friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& m) {
             for (int i = 0; i < m.rows_; ++i) {
                 for (int j = 0; j < m.cols_; ++j) {
@@ -255,6 +279,8 @@ class Matrix {
         void Print() const {
             std::cout << *this;
         }
+
+        virtual ~Matrix() {}
 };
 
 } // namespace s21
