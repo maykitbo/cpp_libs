@@ -98,6 +98,16 @@ class Graph {
             return groups_[group];
         }
 
+        node_t &GetNode(node_type for_find) {
+            for (auto &group : groups_) {
+                for (auto &node : group) {
+                    if (node.GetData() == for_find) {
+                        return node;
+                    }
+                }
+            }
+            throw std::invalid_argument("Node not found");
+        }
 
         void Print() const {
             for (int k = 0; k < groups_.size(); ++k) {
@@ -113,7 +123,13 @@ class Graph {
 template<class node_type, class edge_type>
 class DirectedGraph : public Graph<node_type, edge_type> {
     public:
+        using node_t = typename Graph<node_type, edge_type>::node_t;
+
         DirectedGraph(int groups_count = 1) noexcept : Graph<node_type, edge_type>(groups_count) {}
+
+        void AddEdge(const node_type source, const node_type destination, edge_type edge_data) {
+            AddEdge(this->GetNode(source), this->GetNode(destination), edge_data);
+        }
 
         void AddEdge(node_t &source, node_t &destination, edge_type edge_data) override {
             source.AddOutput(destination, edge_data);
@@ -124,7 +140,13 @@ class DirectedGraph : public Graph<node_type, edge_type> {
 template<class node_type, class edge_type>
 class UndirectedGraph : public Graph<node_type, edge_type> {
     public:
+        using node_t = typename Graph<node_type, edge_type>::node_t;
+
         UndirectedGraph(int groups_count = 1) noexcept : Graph<node_type, edge_type>(groups_count) {}
+
+        void AddEdge(const node_type source, const node_type destination, edge_type edge_data) {
+            AddEdge(this->GetNode(source), this->GetNode(destination), edge_data);
+        }
 
         void AddEdge(node_t &source, node_t &destination, edge_type edge_data) override {
             destination.AddInput(source.AddOutput(destination, edge_data));

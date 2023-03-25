@@ -5,28 +5,35 @@
 #include <list>
 
 #include "../utility/time.h"
+#include "../utility/str.h"
+
+#include "graph.h"
 
 using namespace s21;
 
 int main() {
-    std::unordered_map<int, int> um;
-    for (int k = 0; k < 5000000; ++k) {
-        um.insert({k, 0});
+
+    DirectedGraph<std::string, int> DG(3);
+    for (int k = 0; k < 3; ++k) {
+        for (int g = k; g < 4; ++g) {
+            DG.AddNode(Str::Fill<' '>("Di Node", k, g), k);
+            try {
+                DG.AddEdge(Str::Fill<' '>("Di Node", k, g), Str::Fill<' '>("Di Node", k - 1, g - 1), k);
+            } catch(...) {}
+        }
     }
-    std::vector<int> V(5000000);
-    std::list<int> L(5000000);
 
-    auto T = Time::Now();
-    for (auto &i : um) {}
-    std::cout << Time::Duration(T) << "\n";
+    UndirectedGraph<std::string ,int> UDG(3);
+    for (int k = 0; k < 3; ++k) {
+        for (int g = k; g < 4; ++g) {
+            UDG.AddNode(Str::Fill<' '>("Di Node", k, g), k);
+            try {
+                UDG.AddEdge(Str::Fill<' '>("Di Node", k, g), Str::Fill<' '>("Di Node", k - 1, g - 1), k);
+            } catch(...) {}
+        }
+    }
 
-    T = Time::Now();
-    for (auto &i : V) {}
-    std::cout << Time::Duration(T) << "\n";
-
-    T = Time::Now();
-    for (auto &i : L) {}
-    std::cout << Time::Duration(T) << "\n";
-
+    // DG.Print();
+    // UDG.Print();
     return 0;
 }

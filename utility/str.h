@@ -6,11 +6,11 @@ namespace s21 {
 
 namespace Str {
 
-template <const char Delimetr, class... Args >
+template <const char Delimiter, class... Args >
 std::string Fill(Args &&... args) {
   std::ostringstream sstr;
   int i = 0;
-  ((sstr << std::dec << args << (++i == sizeof...(args) ? '\0' : Delimetr)), ...);
+  ((sstr << std::dec << args << (++i == sizeof...(args) ? '\0' : Delimiter)), ...);
   return sstr.str();
 }
 
