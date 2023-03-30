@@ -112,6 +112,9 @@ TEST(arithmetic, mul_vector) {
     std::vector<int> mul{-14, -32, -50};
     auto res = M * V;
     ASSERT_EQ(res, mul);
+    M *= V;
+    Matrix<int> R{{-14}, {-32}, {-50}};
+    ASSERT_EQ(M, R);
 }
 
 TEST(combined, fill__mul_num) {

@@ -197,39 +197,35 @@ class Matrix {
             if (cols_ != other.size()) error("Mul");
             std::vector<T> result(rows_);
             for (size_t i = 0; i < rows_; ++i) {
-                T sum = 0;
+                result[i] = 0;
                 for (size_t j = 0; j < cols_; ++j) {
-                    sum += matrix_[i][j] * other[j];
+                    result[i] += matrix_[i][j] * other[j];
                 }
-                result[i] = sum;
             }
             return result;
         }
-        // void operator*=(const std::vector<T>& other) {
-        //     if (cols_ != other.size()) error("Mul");
-        //     std::vector<T> result(rows_);
-        //     for (size_t i = 0; i < rows_; ++i) {
-        //         T sum = 0;
-        //         for (size_t j = 0; j < cols_; ++j) {
-        //             sum += matrix_[i][j] * other[j];
-        //         }
-        //         result[i] = sum;
-        //     }
-        //     *this = result;
-        // }
-        // template<class Vec>
-        // friend std::vector<T> operator*(const std::vector<Vec>& v, const Matrix& m) {
-        //     if (v.size() != m.rows_) m.error("Mul");
-        //     std::vector<T> result(m.cols_);
-        //     for (size_t j = 0; j < m.cols_; ++j) {
-        //         T sum = 0;
-        //         for (size_t i = 0; i < m.rows_; ++i) {
-        //             sum += v[i] * m.matrix_[i][j];
-        //         }
-        //         result[j] = sum;
-        //     }
-        //     return result;
-        // }
+        void operator*=(const std::vector<T>& other) {
+            if (cols_ != other.size()) error("Mul");
+            *this = std::move(Matrix(rows_, 1, [&] (T &cell, size_t k, size_t g) {
+                cell = 0;
+                for (size_t i = 0; i < cols_; ++i) {
+                    cell += matrix_[k][i] * other[i];
+                }
+            }));
+        }
+        template<class Vec>
+        friend std::vector<T> operator*(const std::vector<Vec>& v, const Matrix& m) {
+            if (v.size() != m.rows_) m.error("Mul");
+            std::vector<T> result(m.cols_);
+            for (size_t j = 0; j < m.cols_; ++j) {
+                T sum = 0;
+                for (size_t i = 0; i < m.rows_; ++i) {
+                    sum += v[i] * m.matrix_[i][j];
+                }
+                result[j] = sum;
+            }
+            return result;
+        }
         // template<class Vec>
         // friend void operator*=(std::vector<Vec>& v, const Matrix& m) {
         //     if (v.size() != m.rows_) m.error("Mul");
@@ -244,8 +240,7 @@ class Matrix {
         //     v = result;
         // }
         void operator*=(Matrix &other) {
-            auto temp = *this;
-            *this = temp * other;
+            *this = std::move(*this * other);
         }
         Matrix operator+(Matrix &other) const {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
