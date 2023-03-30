@@ -1,6 +1,8 @@
 #pragma once
 
 #include <random>
+#include <map>
+#include <iostream>
 
 namespace s21 {
 
@@ -9,8 +11,8 @@ namespace Random {
 template<class Type, class Distribution, class Engine, class ...Args>
 Type Full(Args &&...args) {
     static Engine generator{std::random_device{}()};
-    static Distribution distribution{args...};
-    return distribution(generator);
+    static std::map<std::tuple<std::decay_t<Args>...>, Distribution> distributions;
+    return distributions.emplace(std::tie(args...), Distribution(args...)).first->second(generator);
 }
 
 template<class Type = float, class Distribution = std::normal_distribution<Type>,class Engine = std::mt19937>
