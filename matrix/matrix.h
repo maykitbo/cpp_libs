@@ -6,85 +6,107 @@
 #include <vector>
 #include <cmath>
 #include <memory>
+#include <fstream>
 
 namespace s21 {
 
 template<class T>
 class Matrix {
     private:
-        std::unique_ptr<T[]> matrix_;
+        T **matrix_;
         size_t rows_, cols_;
-
-        class RowProxy {
-            Matrix<T>& matrix_;
-            size_t row_;
-            public:
-                RowProxy(Matrix<T>& matrix, size_t row) : matrix_(matrix), row_(row) {}
-                T& operator[](size_t col) {
-                    return matrix_(row_, col);
+        void create(std::function<void(size_t, size_t)> func) {
+            matrix_ = new T *[rows_];
+            for (size_t k = 0; k < rows_; ++k) {
+                matrix_[k] = new T [cols_];
+                for (size_t g = 0; g < cols_; ++g) {
+                    func(k, g);
                 }
-        };
+            }
+        }
+
+        void allocate() {
+            matrix_ = new T *[rows_];
+            for (size_t k = 0; k < rows_; ++k) {
+                matrix_[k] = new T [cols_];
+            }
+        }
+
+        void error(std::string name) const {
+            throw std::invalid_argument("Matrix: " + name + " error");
+        }
+
+        void row_col_error(size_t row, size_t col, std::string name) const {
+            if (row >= rows_ || row < 0 || col >= cols_ || col < 0) error(name);
+        }
 
     public:
-        void Loop(std::function<void(int, int)> func) {
-            for (int k = 0; k < rows_; ++k) {
-                for (int g = 0; g < cols_; ++g) {
+        void Loop(std::function<void(size_t, size_t)> func) {
+            for (size_t k = 0; k < rows_; ++k) {
+                for (size_t g = 0; g < cols_; ++g) {
                     func(k, g);
                 }
             }
         }
 
         Matrix() noexcept : rows_(0), cols_(0) {}
-        Matrix(int rows, int cols) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]()) {}
-        Matrix(int rows, int cols, const T value) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value; });
+        Matrix(size_t rows, size_t cols) : rows_(rows), cols_(cols) { allocate(); }
+        Matrix(size_t square) : rows_(square), cols_(square) { allocate(); }
+        Matrix(size_t rows, size_t cols, const T &value) : rows_(rows), cols_(cols) {
+            create([&] (size_t k, size_t g) { matrix_[k][g] = value; });
         }
-        Matrix(int rows, int cols, std::function<const T(void)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value_func(); });
+        Matrix(size_t rows, size_t cols, std::function<const T(void)> value_func) : rows_(rows), cols_(cols) {
+            create([&] (size_t k, size_t g) { matrix_[k][g] = value_func(); });
         }
-        Matrix(int rows, int cols, std::function<void(T&)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
-            Loop([&] (int k, int g) { value_func(matrix_[k * cols_ + g]); });
+        Matrix(size_t rows, size_t cols, std::function<void(T&)> value_func) : rows_(rows), cols_(cols) {
+            create([&] (size_t k, size_t g) { value_func(matrix_[k][g]); });
         }
-        Matrix(int rows, int cols, std::function<void(T&, int, int)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
-            Loop([&] (int k, int g) { value_func(matrix_[k * cols_ + g], k, g); });
+        Matrix(size_t rows, size_t cols, std::function<void(T&, size_t, size_t)> value_func) : rows_(rows), cols_(cols) {
+            create([&] (size_t k, size_t g) { value_func(matrix_[k][g], k, g); });
         }
-        Matrix(const Matrix &other) : rows_(other.rows_), cols_(other.cols_), matrix_(new T[other.rows_ * other.cols_]) {
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] = other(k, g); });
+        Matrix(const Matrix &other) : rows_(other.rows_), cols_(other.cols_) {
+            create([&] (size_t k, size_t g) { matrix_[k][g] = other(k, g); });
         }
         Matrix(std::initializer_list<std::initializer_list<T>> const &items) :
-                rows_(items.size()), cols_(items.begin()->size()), matrix_(new T[items.size() * items.begin()->size()]) {
-            int k = 0;
+                rows_(items.size()), cols_(items.begin()->size()), matrix_(new T *[items.size()]) {
+            size_t k = 0;
             for (auto const &row : items) {
-                int g = 0;
+                size_t g = 0;
+                matrix_[k] = new T[row.size()];
                 for (auto const &cell : row) {
-                    matrix_[k * cols_ + (g++)] = cell;
+                    matrix_[k][g++] = cell;
                 }
                 ++k;
             }
         }
+        // Matrix(const std::vector<T> &vec) : 
         Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), matrix_(std::move(other.matrix_)) {
             other.matrix_ = nullptr;
             other.rows_ = 0;
             other.cols_ = 0;
         }
 
-        RowProxy operator[](size_t row) {
-            return RowProxy(*this, row);
+        T *operator[](size_t row) {
+            // return RowProxy(*this, row);
+            return matrix_[row];
         }
         T &operator()(size_t row, size_t col) {
-            return matrix_[row * cols_ + col];
+            row_col_error(row, col, "operator()");
+            return matrix_[row][col];
         }
         const T &operator()(size_t row, size_t col) const {
-            return matrix_[row * cols_ + col];
+            row_col_error(row, col, "const operator()");
+            return matrix_[row][col];
         }
 
         void Resize(size_t new_rows, size_t new_cols) {
+            if (new_rows <= 0 || new_cols <= 0) error("Resize");
             Matrix<T> new_matrix(new_rows, new_cols);
-            int min_rows = std::min(rows_, new_rows);
-            int min_cols = std::min(cols_, new_cols);
-            for (int k = 0; k < min_rows; ++k) {
-                for (int g = 0; g < min_cols; ++g) {
-                    new_matrix(k, g) = matrix_[k * cols_ + g];
+            size_t min_rows = std::min(rows_, new_rows);
+            size_t min_cols = std::min(cols_, new_cols);
+            for (size_t k = 0; k < min_rows; ++k) {
+                for (size_t g = 0; g < min_cols; ++g) {
+                    new_matrix(k, g) = matrix_[k][g];
                 }
             }
             *this = std::move(new_matrix);
@@ -112,21 +134,40 @@ class Matrix {
             return *this;
         }
 
-        void ForEach(std::function<void(const T&)> func) const {
-            Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
+        void SwapRows(size_t row1, size_t row2) {
+            if (row1 == row2) return;
+            if (row1 >= rows_ || row1 < 0 || row2 >= rows_ || row2 < 0) error("SwapRows");
+            for (size_t col = 0; col < cols_; ++col) {
+                std::swap(matrix_[row1][col], matrix_[row2][col]);
+            }
         }
-        void Fill(std::function<void(T&)> func) {
-            Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
+        void SwapCols(size_t col1, size_t col2) {
+            if (col1 >= cols_ || col1 < 0 || col2 >= cols_ || col2 < 0) error("SwapCols");
+            if (col1 == col2) return;
+            for (size_t row = 0; row < rows_; ++row) {
+                std::swap(matrix_[row][col1], matrix_[row][col2]);
+            }
         }
 
-        const T &Get(int row, int col) const {
-            return matrix_[row * cols_ + col];
-        }
-        void Set(int row, int col, T value) {
-            if (row >= rows_ || row < 0 || col >= cols_ || col < 0) {
-                throw std::invalid_argument("Matrix: Set error");
+        void ForEach(std::function<void(const T&)> func) const {
+            // Loop([&] (size_t k, size_t g) { func(matrix_[k * cols_ + g]); });
+            for (size_t k = 0; k < rows_; ++k) {
+                for (size_t g = 0; g < cols_; ++g) {
+                    func(matrix_[k][g]);
+                }
             }
-            matrix_[row * cols_ + col] = value;
+        }
+        void Fill(std::function<void(T&)> func) {
+            Loop([&] (size_t k, size_t g) { func(matrix_[k][g]); });
+        }
+
+        const T &Get(size_t row, size_t col) const {
+            row_col_error(row, col, "Get");
+            return matrix_[row][col];
+        }
+        void Set(size_t row, size_t col, T value) {
+            row_col_error(row, col, "Set");
+            matrix_[row][col] = value;
         }
         size_t GetRows() const {
             return rows_;
@@ -135,71 +176,113 @@ class Matrix {
             return cols_;
         }
 
-        Matrix operator*(const double num) const {
-            return Matrix(rows_, cols_, [&] (T &cell, int k, int g) { cell = matrix_[k * cols_ + g] * num; });
+        template<class Mul>
+        Matrix operator*(const Mul num) const {
+            return Matrix(rows_, cols_, [&] (T &cell, size_t k, size_t g) { cell = matrix_[k][g] * num; });
         }
-        void operator*=(const double num) {
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] *= num; });
+        template<class Mul>
+        void operator*=(const Mul num) {
+            Loop([&] (size_t k, size_t g) { matrix_[k][g] *= num; });
         }
-        Matrix operator*(Matrix &other) const {
-            if (cols_ != other.rows_) {
-                throw std::invalid_argument("Matrix: Mul error");
-            }
-            return Matrix(rows_, other.cols_, [&] (T &cell, int k, int g) {
+        Matrix operator*(const Matrix &other) const {
+            if (cols_ != other.rows_) error("Mul");
+            return Matrix(rows_, other.cols_, [&] (T &cell, size_t k, size_t g) {
                 cell = 0;
-                for (int i = 0; i < cols_; ++i) {
-                    cell += matrix_[k * cols_ + i] * other(i, g);
+                for (size_t i = 0; i < cols_; ++i) {
+                    cell += matrix_[k][i] * other(i, g);
                 }
             });
         }
+        std::vector<T> operator*(const std::vector<T>& other) {
+            if (cols_ != other.size()) error("Mul");
+            std::vector<T> result(rows_);
+            for (size_t i = 0; i < rows_; ++i) {
+                T sum = 0;
+                for (size_t j = 0; j < cols_; ++j) {
+                    sum += matrix_[i][j] * other[j];
+                }
+                result[i] = sum;
+            }
+            return result;
+        }
+        // void operator*=(const std::vector<T>& other) {
+        //     if (cols_ != other.size()) error("Mul");
+        //     std::vector<T> result(rows_);
+        //     for (size_t i = 0; i < rows_; ++i) {
+        //         T sum = 0;
+        //         for (size_t j = 0; j < cols_; ++j) {
+        //             sum += matrix_[i][j] * other[j];
+        //         }
+        //         result[i] = sum;
+        //     }
+        //     *this = result;
+        // }
+        // template<class Vec>
+        // friend std::vector<T> operator*(const std::vector<Vec>& v, const Matrix& m) {
+        //     if (v.size() != m.rows_) m.error("Mul");
+        //     std::vector<T> result(m.cols_);
+        //     for (size_t j = 0; j < m.cols_; ++j) {
+        //         T sum = 0;
+        //         for (size_t i = 0; i < m.rows_; ++i) {
+        //             sum += v[i] * m.matrix_[i][j];
+        //         }
+        //         result[j] = sum;
+        //     }
+        //     return result;
+        // }
+        // template<class Vec>
+        // friend void operator*=(std::vector<Vec>& v, const Matrix& m) {
+        //     if (v.size() != m.rows_) m.error("Mul");
+        //     std::vector<T> result(m.cols_);
+        //     for (size_t j = 0; j < m.cols_; ++j) {
+        //         T sum = 0;
+        //         for (size_t i = 0; i < m.rows_; ++i) {
+        //             sum += v[i] * m.matrix_[i][j];
+        //         }
+        //         result[j] = sum;
+        //     }
+        //     v = result;
+        // }
         void operator*=(Matrix &other) {
             auto temp = *this;
             *this = temp * other;
         }
         Matrix operator+(Matrix &other) const {
-            if (rows_ != other.rows_ || cols_ != other.cols_) {
-                throw std::invalid_argument("Matrix: Sum error");
-            }
-            return Matrix(rows_, cols_, [&] (T &cell, int k, int g) {
-                cell = matrix_[k * cols_ + g] + other(k, g);
+            if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
+            return Matrix(rows_, cols_, [&] (T &cell, size_t k, size_t g) {
+                cell = matrix_[k][g] + other(k, g);
             });
         }
         void operator+=(Matrix &other) {
-            if (rows_ != other.rows_ || cols_ != other.cols_) {
-                throw std::invalid_argument("Matrix: Sum error");
-            }
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] += other(k, g); });
+            if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
+            Loop([&] (size_t k, size_t g) { matrix_[k][g] += other(k, g); });
         }
         Matrix operator-(Matrix &other) const {
-            if (rows_ != other.rows_ || cols_ != other.cols_) {
-                throw std::invalid_argument("Matrix: Sum error");
-            }
-            return Matrix(rows_, cols_, [&] (T &cell, int k, int g) {
-                cell = matrix_[k * cols_ + g] - other(k, g);
+            if (rows_ != other.rows_ || cols_ != other.cols_) error("Sub");
+            return Matrix(rows_, cols_, [&] (T &cell, size_t k, size_t g) {
+                cell = matrix_[k][g] - other(k, g);
             });
         }
         void operator-=(Matrix &other) {
-            if (rows_ != other.rows_ || cols_ != other.cols_) {
-                throw std::invalid_argument("Matrix: Sum error");
-            }
-            Loop([&] (int k, int g) { matrix_[k * cols_ + g] -= other(k, g); });
+            if (rows_ != other.rows_ || cols_ != other.cols_) error("Sub");
+            Loop([&] (size_t k, size_t g) { matrix_[k][g] -= other(k, g); });
         }
 
         Matrix Transpose() const {
-            return Matrix(cols_, rows_, [&] (T &cell, int k, int g) {
-                cell = matrix_[g * cols_ + k];
+            return Matrix(cols_, rows_, [&] (T &cell, size_t k, size_t g) {
+                cell = matrix_[g][k];
             });
         }
         void TransposeThis() {
-            auto temp = *this;
-            *this = temp.Transpose();
+            Matrix temp = Transpose();
+            *this = std::move(temp);
         }
 
         bool operator==(const Matrix &other) const {
             if (cols_ != other.cols_ || rows_ != other.rows_) return false;
-            for (int k = 0; k < rows_; ++k) {
-                for (int g = 0; g < cols_; ++g) {
-                    if (other(k, g) != matrix_[k * cols_ + g]) {
+            for (size_t k = 0; k < rows_; ++k) {
+                for (size_t g = 0; g < cols_; ++g) {
+                    if (other(k, g) != matrix_[k][g]) {
                         return false;
                     }
                 }
@@ -210,15 +293,16 @@ class Matrix {
             return !operator==(other);
         }
 
-        Matrix Minor(int row, int col) {
+        Matrix Minor(size_t row, size_t col) {
+            row_col_error(row, col, "Minor");
             Matrix res(rows_ - 1, cols_ - 1);
-            int i = 0, j;
-            for (int k = 0; k < rows_; k++) {
+            size_t i = 0, j;
+            for (size_t k = 0; k < rows_; k++) {
                 j = 0;
                 if (k == row) continue;
-                for (int g = 0; g < cols_; g++) {
+                for (size_t g = 0; g < cols_; g++) {
                     if (g != col) {
-                        res.matrix_[i * cols_ + j] = matrix_[k * cols_ + g];
+                        res.matrix_[i][j] = matrix_[k][g];
                         j++;
                     }
                 }
@@ -226,59 +310,91 @@ class Matrix {
             }
             return res;
         }
-        T Determinant() {
-            if (rows_ != cols_) {
-                throw std::invalid_argument("Matrix: Determinant error");
-            }
-            std::vector<std::vector<T>> lu(rows_, std::vector<T>(cols_));
-            std::vector<int> pivot(rows_);
-            Loop([&] (int i, int j) { lu[i][j] = matrix_[i * cols_ + j]; });
-            int sign = 1;
-            for (int i = 0; i < rows_; i++) {
-                pivot[i] = i;
-            }
-            for (int k = 0; k < rows_ - 1; k++) {
-                T max_value = 0;
-                int max_index = k;
-                for (int i = k; i < rows_; i++) {
-                    T abs_value = std::abs(lu[i][k]);
-                    if (abs_value > max_value) {
-                        max_value = abs_value;
-                        max_index = i;
-                    }
-                }
-                if (max_index != k) {
-                    std::swap(lu[k], lu[max_index]);
-                    std::swap(pivot[k], pivot[max_index]);
-                    sign *= -1;
-                }
-                for (int i = k + 1; i < rows_; i++) {
-                    T factor = lu[i][k] / lu[k][k];
-                    for (int j = k + 1; j < cols_; j++) {
-                        lu[i][j] -= factor * lu[k][j];
-                    }
-                    lu[i][k] = factor;
-                }
-            }
-            T det = sign;
-            for (int i = 0; i < rows_; i++) {
-                det *= lu[i][i];
-            }
-            return det;
-        }
+        // T Determinant() {
+        //     if (rows_ != cols_) error("Determinant");
+        //     std::vector<std::vector<T>> lu(rows_, std::vector<T>(cols_));
+        //     std::vector<size_t> pivot(rows_);
+        //     Loop([&] (size_t i, size_t j) { lu[i][j] = matrix_[i][j]; });
+        //     size_t sign = 1;
+        //     for (size_t i = 0; i < rows_; i++) {
+        //         pivot[i] = i;
+        //     }
+        //     for (size_t k = 0; k < rows_ - 1; k++) {
+        //         T max_value = 0;
+        //         size_t max_index = k;
+        //         for (size_t i = k; i < rows_; i++) {
+        //             T abs_value = std::abs(lu[i][k]);
+        //             if (abs_value > max_value) {
+        //                 max_value = abs_value;
+        //                 max_index = i;
+        //             }
+        //         }
+        //         if (max_index != k) {
+        //             std::swap(lu[k], lu[max_index]);
+        //             std::swap(pivot[k], pivot[max_index]);
+        //             sign *= -1;
+        //         }
+        //         for (size_t i = k + 1; i < rows_; i++) {
+        //             T factor = lu[i][k] / lu[k][k];
+        //             for (size_t j = k + 1; j < cols_; j++) {
+        //                 lu[i][j] -= factor * lu[k][j];
+        //             }
+        //             lu[i][k] = factor;
+        //         }
+        //     }
+        //     T det = sign;
+        //     for (size_t i = 0; i < rows_; i++) {
+        //         det *= lu[i][i];
+        //     }
+        //     return det;
+        // }
 
+        void Print() {
+            std::cout << *this;
+        }
         friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& m) {
-            for (int i = 0; i < m.rows_; ++i) {
-                for (int j = 0; j < m.cols_; ++j) {
+            for (size_t i = 0; i < m.rows_; ++i) {
+                for (size_t j = 0; j < m.cols_; ++j) {
                     os << m(i, j) << " ";
                 }
                 os << "\n";
             }
             return os;
         }
-        void Print() const {
-            std::cout << *this;
+        void ToFile(std::ofstream &file) {
+            file << rows_ << " " << cols_ << "\n";
+            Loop([&] (size_t k, size_t g) {
+                file << (matrix_[k][g]) << (g == cols_ - 1 ? '\n' : ' ');
+            });
         }
+        void ToFile(const std::string &file_name) {
+            std::ofstream file(file_name);
+            ToFile(file);
+            file.close();
+        }
+        // void FromFile(const std::ifstream &file) {
+        //     file >> rows_;
+        //     file >> cols_;
+        //     Matrix<T> new_matrix(rows_, cols_);
+        //     Fill([&] (T &cell) {
+        //         file >> cell;
+        //     });
+        //     *this = std::move(new_matrix);
+        // }
+        // void FromFile(const std::string &file_name) {
+        //     std::ifstream file(file_name);
+        //     FromFile(file);
+        //     file.close();
+        // }
+        // friend std::ofstream& operator<<(std::ofstream &file, const Matrix<T>& m) {
+        //     m.ToFile(file);
+        // }
+        // friend std::ifstream& operator<<(const std::ifstream &file, Matrix<T>& m) {
+        //     m.FromFile(file);
+        // }
+        // void Prsize_t() const {
+        //     std::cout << *this;
+        // }
 
         virtual ~Matrix() {}
 };

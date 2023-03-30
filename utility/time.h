@@ -24,6 +24,13 @@ int64_t Duration(T first, T second = Now()) {
     return std::chrono::duration_cast<Unit>(second - first).count();
 }
 
+template<class Unit = ms>
+int64_t Test(std::function<void(void)> test_func) {
+    T time_point = Now();
+    test_func();
+    return Duration(time_point); 
+}
+
 } // namespace Time
 
 } // namespace s21

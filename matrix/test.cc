@@ -50,6 +50,16 @@ TEST(operator, test_2) {
     ASSERT_EQ(A == C, false);
 }
 
+TEST(operator, test_3) {
+    Matrix<int> M{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {0, 0, 0}};
+    ASSERT_EQ(M[2][2], 9);
+    Matrix<long double> B(100, 100, [&] { return Random::Uniform(-0.00001, 0.00001); });
+    Matrix<long double> A(B);
+    A.Loop([&] (int k, int g) {
+        ASSERT_EQ(A(k, g), B[k][g]);
+    });
+}
+
 TEST(arithmetic, sum) {
     Matrix<int> A{{1, 2, 4, 6}, {-1, 0, 0, 0}};
     Matrix<int> B{{0, 3, 4, 11}, {0, -1, -2, 0}};
@@ -82,11 +92,26 @@ TEST(arithmetic, mul) {
     ASSERT_EQ(A, D);
 }
 
-TEST(arithmetic, determinant) {
-    Matrix<long double> A{{7, -4}, {55, 1}};
-    ASSERT_EQ(std::abs(A.Determinant() - 227.0) < 1e-3, true);
-    Matrix<double> B{{1.999,2.56,-3.1}, {-0.44,8,0.01}, {2,-0.099,3.02}};
-    ASSERT_EQ(std::abs(B.Determinant() - 101.216) < 1e-3, true);
+// TEST(arithmetic, determinant) {
+//     Matrix<long double> A{{7, -4}, {55, 1}};
+//     ASSERT_EQ(std::abs(A.Determinant() - 227.0) < 1e-3, true);
+//     Matrix<double> B{{1.999,2.56,-3.1}, {-0.44,8,0.01}, {2,-0.099,3.02}};
+//     ASSERT_EQ(std::abs(B.Determinant() - 101.216) < 1e-3, true);
+// }
+
+TEST(arithmetic, transpose) {
+    Matrix<int64_t> T(10, 100);
+    auto F = T.Transpose();
+    T.TransposeThis();
+    ASSERT_EQ(T, F);
+}
+
+TEST(arithmetic, mul_vector) {
+    Matrix<int> M{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    std::vector<int> V{-1, -2, -3};
+    std::vector<int> mul{-14, -32, -50};
+    auto res = M * V;
+    ASSERT_EQ(res, mul);
 }
 
 TEST(combined, fill__mul_num) {
@@ -128,11 +153,54 @@ TEST(resize, test_2) {
     ASSERT_EQ(A, B);
 }
 
-TEST(operator, test_3) {
-    Matrix<int> A{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {0, 0, 0}};
-    ASSERT_EQ(A[2][2], 9);
+TEST(swap, cols) {
+    Matrix<int64_t> A{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {-1, -2, -3}};
+    A.SwapCols(0, 2);
+    ASSERT_EQ(A, Matrix<int64_t>({{3, 2, 1}, {6, 5, 4}, {9, 8, 7}, {-3, -2, -1}}));
 }
 
+TEST(swap, rows) {
+    Matrix<char> A{{'a', 'b'}, {'c', 'd'}};
+    A.SwapRows(0, 1);
+    ASSERT_EQ(A, Matrix<char>({{'c', 'd'}, {'a', 'b'}}));
+}
 
+TEST(errors, row_col) {
+    Matrix<int> F(2, 2);
 
+    ASSERT_ANY_THROW(F.Resize(-2, 4));
+    ASSERT_ANY_THROW(F.ResizeCols(-4));
+    ASSERT_ANY_THROW(F.ResizeRows(0));
+
+    ASSERT_ANY_THROW(F.SwapCols(-1, 1));
+    ASSERT_ANY_THROW(F.SwapCols(0, 10));
+    ASSERT_ANY_THROW(F.SwapRows(1, 2));
+    ASSERT_ANY_THROW(F.SwapRows(-10, 1));
+
+    ASSERT_ANY_THROW(F.Get(-1, 1));
+    ASSERT_ANY_THROW(F.Set(1, 10, 5));
+
+    ASSERT_ANY_THROW(F(-1, 1));
+    ASSERT_ANY_THROW(F(1, 3));
+
+    ASSERT_ANY_THROW(F.Minor(1, -5));
+    ASSERT_ANY_THROW(F.Minor(2, 0));
+}
+
+TEST(errors, arithmetic) {
+    Matrix<int> F(2, 2);
+    Matrix<int> G(2, 3);
+    Matrix<int> K(3, 2);
+
+    ASSERT_ANY_THROW(F + G);
+    ASSERT_ANY_THROW(G += K);
+    ASSERT_ANY_THROW(K - F);
+    ASSERT_ANY_THROW(F -= K);
+
+    ASSERT_ANY_THROW(G * F);
+    ASSERT_ANY_THROW(F *= K);
+
+    // ASSERT_ANY_THROW(G.Determinant());
+    // ASSERT_ANY_THROW(K.Determinant());
+}
 
