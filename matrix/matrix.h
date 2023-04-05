@@ -12,7 +12,7 @@ namespace s21 {
 
 template<class T>
 class Matrix {
-    private:
+    protected:
         T **matrix_;
         size_t rows_, cols_;
         void create(std::function<void(size_t, size_t)> func) {
@@ -79,7 +79,6 @@ class Matrix {
                 ++k;
             }
         }
-        // Matrix(const std::vector<T> &vec) : 
         Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), matrix_(std::move(other.matrix_)) {
             other.matrix_ = nullptr;
             other.rows_ = 0;
@@ -87,7 +86,6 @@ class Matrix {
         }
 
         T *operator[](size_t row) {
-            // return RowProxy(*this, row);
             return matrix_[row];
         }
         T &operator()(size_t row, size_t col) {
@@ -193,6 +191,9 @@ class Matrix {
                 }
             });
         }
+        void operator*=(Matrix &other) {
+            *this = std::move(*this * other);
+        }
         std::vector<T> operator*(const std::vector<T>& other) {
             if (cols_ != other.size()) error("Mul");
             std::vector<T> result(rows_);
@@ -239,9 +240,6 @@ class Matrix {
         //     }
         //     v = result;
         // }
-        void operator*=(Matrix &other) {
-            *this = std::move(*this * other);
-        }
         Matrix operator+(Matrix &other) const {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
             return Matrix(rows_, cols_, [&] (T &cell, size_t k, size_t g) {

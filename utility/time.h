@@ -26,9 +26,11 @@ int64_t Duration(T first, T second = Now()) {
 }
 
 template<class Unit = ms>
-int64_t Test(std::function<void(void)> test_func) {
+int64_t Test(std::function<void(void)> test_func, int loop_count = 1) {
     T time_point = Now();
-    test_func();
+    for (int k = 0; k < loop_count; ++k) {
+        test_func();
+    }
     return Duration(time_point); 
 }
 
