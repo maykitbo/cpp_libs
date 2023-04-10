@@ -34,6 +34,11 @@ int64_t Test(std::function<void(void)> test_func, int loop_count = 1) {
     return Duration(time_point); 
 }
 
+template<class Unit = ms>
+std::pair<int64_t, int64_t> Compare(std::function<void(void)> func1, std::function<void(void)> func2, int loop_count = 1) {
+    return std::make_pair(Test<Unit>(func1, loop_count), Test<Unit>(func2, loop_count));
+}
+
 } // namespace Time
 
 } // namespace s21

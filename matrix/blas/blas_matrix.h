@@ -1,35 +1,83 @@
 #pragma once
 
 #include <vector>
-// #include <mkl.h>
+
 
 #include <cblas.h>
 
 #include <iostream>
+#include <functional>
 
+namespace BLAS {
+
+class Arithmetic;
 
 template<class T>
-class BLASMatrix {
+class Matrix {
+
+    friend class Arithmetic;
     size_t rows_, cols_;
     std::vector<T> matrix_;
+
     public:
-        BLASMatrix(size_t row, size_t col) : rows_(row), cols_(col), matrix_(row * col) {}
+        Matrix(size_t row, size_t col) : rows_(row), cols_(col), matrix_(row * col) {}
 
-        BLASMatrix(size_t row, size_t col, const std::vector<T> &vec) : rows_(row), cols_(col), matrix_(vec) {} 
+        Matrix(size_t row, size_t col, const std::vector<T> &vec) : rows_(row), cols_(col), matrix_(vec) {}
 
-        friend void MulS(BLASMatrix &A, BLASMatrix &B, BLASMatrix &C) {
-            if (A.cols_ != B.rows_ || A.rows_ != C.rows_ || B.cols_ != C.cols_) throw(std::invalid_argument("lox\n"));
-            for (int k = 0; k < A.rows_; ++k) {
-                for (int g = 0; g < B.cols_; ++g) {
-                    T sum = 0;
-                    for (int i = 0; i < A.cols_; ++i) {
-                        sum += A.matrix_[A.cols_ * k + i] * B.matrix_[B.cols_ * i + g];
-                    }
-                    C.matrix_[C.cols_ * k + g] = sum;
+        Matrix(size_t row, size_t col, std::function<T(void)> func) : Matrix(row, col) {
+            std::generate(matrix_.begin(), matrix_.end(), func);
+        }
+
+        Matrix(std::initializer_list<std::initializer_list<T>> const &items) :
+               Matrix(items.size(), items.begin()->size()) {
+            size_t k = 0;
+            for (auto const &row : items) {
+                for (auto const &cell : row) {
+                    matrix_[k++] = cell;
                 }
             }
         }
-        friend void MulOmp(BLASMatrix &A, BLASMatrix &B, BLASMatrix &C) {
+        void Update(const std::vector<T> &vec) {
+            matrix_ = vec;
+        }
+        const size_t GetCols() const { return cols_; }
+        const size_t GetRows() const { return rows_; }
+
+        const std::vector<T> &ToVector() const { return matrix_; }
+        std::vector<T> &ToVector() { return matrix_; }
+
+        
+
+        void Print() {
+            for (int k = 0; k < rows_; ++k) {
+                for (int g = 0; g < cols_; ++g) {
+                    std::cout << matrix_[cols_ * k + g] << ' ';
+                }
+                std::cout << '\n';
+            }
+        }
+};
+
+
+class Arithmetic {
+
+    template<class T>
+    struct mul;
+
+    public:
+        template<class T>
+        static void Mul(const Matrix<T> &A, const Matrix<T> &B, Matrix<T> &C, const T alpha = 1.0, const double beta = 0.0) {
+            mul<T>::func(CblasRowMajor, CblasNoTrans, CblasNoTrans, A.rows_, B.cols_, A.cols_,
+                alpha, A.matrix_.data(), A.cols_, B.matrix_.data(), B.cols_, beta, C.matrix_.data(), B.cols_);
+        }
+        template<class T>
+        static void Mul(const std::vector<T> &A, const Matrix<T> &B, Matrix<T> &C, const T alpha = 1.0, const double beta = 0.0) {
+            mul<T>::func(CblasRowMajor, CblasNoTrans, CblasNoTrans, 1, B.cols_, B.rows_,
+                alpha, A.data(), B.rows_, B.matrix_.data(), B.cols_, beta, C.matrix_.data(), B.cols_);
+        }
+
+        template<class T>
+        static void MulOmp(Matrix<T> &A, Matrix<T> &B, Matrix<T> &C) {
             #pragma omp parallel for collapse(2)
             for (int k = 0; k < A.rows_; ++k) {
                 const int rows = B.cols_;
@@ -44,39 +92,17 @@ class BLASMatrix {
                 }
             }
         }
-        template<class Type>
-        friend void MulMkl(BLASMatrix<Type> &A, BLASMatrix<Type> &B, BLASMatrix<Type> &C);
-
-
-        std::vector<T> ToVector() {
-            return matrix_;
-        }
-
-        void Print() {
-            for (int k = 0; k < rows_; ++k) {
-                for (int g = 0; g < cols_; ++g) {
-                    std::cout << matrix_[cols_ * k + g] << ' ';
-                }
-                std::cout << '\n';
-            }
-        }
 };
 
-
-template<class Type>
-void MulMkl(BLASMatrix<Type> &A, BLASMatrix<Type> &B, BLASMatrix<Type> &C) {
-    throw(std::invalid_argument("MulMkl: template should be <float> or <double>\n"));
-}
+template<>
+struct Arithmetic::mul<float> {
+    constexpr static auto func = cblas_sgemm;
+};
 
 template<>
-void MulMkl<double>(BLASMatrix<double> &A, BLASMatrix<double> &B, BLASMatrix<double> &C) {
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, A.rows_, B.cols_, A.cols_,
-                1.0, A.matrix_.data(), A.cols_, B.matrix_.data(), B.cols_, 0.0, C.matrix_.data(), B.cols_);
-}
+struct Arithmetic::mul<double> {
+    constexpr static auto func = cblas_dgemm;
+};
 
-template<>
-void MulMkl<float>(BLASMatrix<float> &A, BLASMatrix<float> &B, BLASMatrix<float> &C) {
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, A.rows_, B.cols_, A.cols_,
-                1.0, A.matrix_.data(), A.cols_, B.matrix_.data(), B.cols_, 0.0, C.matrix_.data(), B.cols_);
-}
+} // namespace BLAS
 

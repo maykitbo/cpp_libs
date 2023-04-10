@@ -1,77 +1,83 @@
 #include "blas/blas_matrix.h"
 #include "openCL/cl_matrix.h"
 #include "../utility/time.h"
-
-typedef float type;
-
-const size_t M = 300;
-const size_t K = 500;
-const size_t N = 400;
+#include "../utility/random.h"
+#include "../utility/str.h"
+#include <vector>
 
 
-int main() {
-    int l = 100;
-
-    std::vector<type> a(M * K);
-    for (int k = 0; k < M * K; ++k) {
-        a[k] = -15 + k;
-    }
-    std::vector<type> b(N * K);
-    for (int k = 0; k < N * K; ++k) {
-        b[k] = -15 + k;
-    }
-
-    CLMatrix<type> cl_a(M, K, a.data());
-    CLMatrix<type> cl_b(K, N, b.data());
-    CLMatrix<type> cl_c(M, N);
-    
-    std::cout << s21::Time::Test([&] {
-        MulCl(cl_a, cl_b, cl_c);
-    }, l) << " ms CL\n";
-    // cl_c.Print();
-
-    std::cout << s21::Time::Test([&] {
-        MulClBlas(cl_a, cl_b, cl_c);
-    }, l) << " ms CLBlas\n";
-
-    // cl_c.Print();
-    // auto cl_res = cl_c.ToVector();
-
-
-
-    BLASMatrix<type> blas_a(M, K, a);
-    BLASMatrix<type> blas_b(K, N, b);
-    BLASMatrix<type> blas_c(M, N);
-
-    // std::cout << s21::Time::Test([&] {
-    //     MulS(blas_a, blas_b, blas_c);
-    // }, l) << " ms S\n";
-    
-    // blas_c.Print();
-    // auto s_res = blas_c.ToVector();
-    
-    // std::cout << s21::Time::Test([&] {
-    //     MulOmp(blas_a, blas_b, blas_c);
-    // }, l) << " ms OMP\n";
-    // blas_c.Print();
-    // auto omp_res = blas_c.ToVector();
-
-    std::cout << s21::Time::Test([&] {
-        MulMkl(blas_a, blas_b, blas_c);
-    }, l) << " ms MKL\n";
-    
-    // auto mkl_res = blas_c.ToVector();
-    // blas_c.Print();
-
-    // std::cout << (cl_res == s_res) << " " << (s_res == mkl_res) << " " << (cl_res == mkl_res) << "\n";
-    // for (int k = 0; k < M * N; ++k) {
-    //     std::cout << cl_res[k] << "," << s_res[k] << "," << mkl_res[k] << "\n";
-    // }
-
-    
-    return 0;
+static void one_output(int count, const std::string &name, int64_t time) {
+    std::cout << name << ": " << time << ", 1 iter: " << (double)time / (double)count << " ms\n";
 }
 
+static void output(const std::string &name, int count, std::pair<int64_t, int64_t> res) {
+    std::cout << "\n" << name << " count = " << count << ":\n";
+    one_output(count, "blas", res.first);
+    one_output(count, "ocl ", res.second);
+}
 
-// g++ main.cc -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl -I/opt/intel/oneapi/mkl/2023.1.0/include/ -L/opt/intel/oneapi/mkl/2023.0.0/lib/intel64/ -lOpenCL
+template<class Type>
+static void ConstructorVector(const std::string &name, int count, int cols, int rows) {
+    std::vector<Type> vec(cols * rows);
+    for (auto &i : vec) {
+        i = s21::Random::Normal<Type>(0, 1000);
+    }
+    output(s21::Str::Fill<' '>("Constructor vector", name, '(', cols, 'x', rows, ')'), count,
+          s21::Time::Compare([&] { BLAS::Matrix<Type>(cols, rows, vec); },
+                             [&] { CL::Matrix<Type>(cols, rows, vec); }, count));
+}
 
+template<class Type>
+static void Constructor(const std::string &name, int count, int cols, int rows) {
+    output(s21::Str::Fill<' '>("Constructor", name, '(', cols, 'x', rows, ')'), count,
+          s21::Time::Compare([&] { BLAS::Matrix<Type>(cols, rows); },
+                             [&] { CL::Matrix<Type>(cols, rows); }, count));
+}
+
+template<class Type>
+static void MulTest(const std::string &name, int m, int n, int k, int count) {
+    BLAS::Matrix<Type> BMres(m, n);
+    std::vector<Type> v1(m * k);
+    for (auto &i : v1) {
+        i = s21::Random::Normal<Type>(0, 1000);
+    }
+    std::vector<Type> v2(k * n);
+    for (auto &i : v2) {
+        i = s21::Random::Normal<Type>(0, 1000);
+    }
+    CL::Matrix<Type> CMres(m, n);
+    output(s21::Str::Fill<' '>("Mul", name, m, 'x', k, "mul", k, 'x', n), count,
+            s21::Time::Compare([&] { BLAS::Arithmetic::Mul(BLAS::Matrix<Type>(m, k, v1), BLAS::Matrix<Type>(k, n, v2), BMres); },
+                                [&] { CL::Arithmetic::Mul(CL::Matrix<Type>(m, k, v1), CL::Matrix<Type>(k, n, v2), CMres); }));
+}
+
+int main() {
+    Constructor<float>("float", 1, 10000, 10000);
+    Constructor<double>("double", 1, 10000, 10000);
+    ConstructorVector<float>("float", 1, 1000, 10000);
+    ConstructorVector<double>("double", 1, 1000, 10000);
+    Constructor<float>("float", 100, 10000, 1000);
+    Constructor<double>("double", 100, 10000, 1000);
+    ConstructorVector<float>("float", 100, 1000, 1000);
+    ConstructorVector<double>("double", 100, 1000, 1000);
+    Constructor<float>("float", 10000, 100, 5);
+    Constructor<double>("double", 10000, 50, 10);
+    ConstructorVector<float>("float", 10000, 3, 40);
+    ConstructorVector<double>("double", 10000, 4, 60);
+
+    
+    MulTest<float>("float", 5, 5, 5, 10000);
+    MulTest<float>("float", 50, 50, 50, 2000);
+    MulTest<float>("float", 50, 50, 50, 2000);
+    MulTest<float>("float", 500, 500, 500, 300);
+    MulTest<float>("float", 1000, 1000, 1000, 30);
+    MulTest<float>("float", 1000, 10000, 100, 30);
+    MulTest<float>("float", 10000, 10000, 100, 10);
+    MulTest<float>("float", 1000, 1000, 1000, 10);
+    MulTest<float>("float", 1, 10000, 10000, 10);
+    MulTest<float>("float", 10000, 1, 10000, 10);
+    MulTest<float>("float", 1, 1, 10000000, 10);
+    MulTest<float>("float", 1, 10000000, 1, 10);
+
+    return 0;
+}
