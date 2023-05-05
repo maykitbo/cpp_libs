@@ -9,8 +9,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 add_library(${PROJECT_NAME} STATIC
-        random.h,
-        str.h,
-        time.h)
+        random.h
+        str.h
+        time.h
+        dummy.cc)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
