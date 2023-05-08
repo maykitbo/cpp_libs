@@ -20,7 +20,7 @@ std::string Fill(const Args &... args) {
 template <class... Args >
 std::string Fill(const Args &... args) {
   std::ostringstream sstr;
-  (sstr << std::dec << ... << args);
+  ((sstr << std::dec << args), ...);
   return sstr.str();
 }
 
