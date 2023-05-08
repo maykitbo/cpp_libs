@@ -1,5 +1,14 @@
 #include "ConsoleInterface.h"
 
+AbsMenu::AbsMenu(const std::string &name, ConsoleInterface *ci) : name_(name), ci_(ci) {}
+
+std::string &AbsMenu::GetName() { return name_; }
+
+void AbsMenu::GoHome() {
+    ci_->menus_.front()->Action();
+}
+
+
 void ConsoleInterface::Start() {
     if (menus_.empty()) {
         throw std::invalid_argument("Empty ConsoleInterface");
@@ -8,12 +17,12 @@ void ConsoleInterface::Start() {
 }
 
 Menu *ConsoleInterface::AddMenu(const std::initializer_list<std::string> &options, const std::string &name) {
-    menus_.emplace_back(std::unique_ptr<AbsMenu>(new Menu(options, name)));
+    menus_.emplace_back(std::unique_ptr<AbsMenu>(new Menu(options, name, this)));
     return dynamic_cast<Menu*>(menus_.back().get());
 }
 
-Menu::Menu(const std::initializer_list<std::string> &options, const std::string &name) :
-            AbsMenu(name), options_(options.begin(), options.end()) {}
+Menu::Menu(const std::initializer_list<std::string> &options, const std::string &name, ConsoleInterface *ci) :
+            AbsMenu(name, ci), options_(options.begin(), options.end()) {}
 
 void Menu::Action() {
     std::cout << name_ << '\n';
@@ -23,7 +32,9 @@ void Menu::Action() {
     Style::MenuRequest();
     std::string input;
     std::cin >> input;
-    if (input != "exit") {
+    if (input == "home") {
+        GoHome();
+    } else if (input != "exit") {
         int choice = std::atoi(input.data());
         if (choice > 0 && choice <= options_.size()) {
             try {
