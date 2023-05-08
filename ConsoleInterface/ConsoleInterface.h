@@ -107,39 +107,35 @@ void Input<Args...>::Action() {
         auto args = std::make_tuple(Read<Args>()...);
         if (exit_) {
             exit_ = false;
-            return;
+        } else {
+            std::apply(action_, args);
+            next_menu_->Action();
         }
-        std::apply(action_, args);
     } catch (const std::exception &e) {
         if (exit_) {
             exit_ = false;
-            return;
+        } else {
+            Style::ErrorPrint(e.what());
+            Action();
         }
-        Style::ErrorPrint(e.what());
-        Action();
     }
-    next_menu_->Action();
 }
 
 template<class ...Args>
 template<class T>
 T Input<Args...>::Read() {
     std::string word;
-    if (!(std::cin >> word)) {
-        std::string error_input;
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        throw std::runtime_error(error_input);
-    }
+    std::cin >> word;
     if (word == Style::exit_word) {
         exit_ = true;
     }
     std::istringstream iss(word);
     T value;
     if (!(iss >> value)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         throw std::runtime_error(word);
     }
     return value;
 }
-
 
