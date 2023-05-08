@@ -9,7 +9,7 @@ namespace s21 {
 
 namespace SStr {
 
-template <const char Delimiter = ' ', class... Args >
+template <const char Delimiter, class... Args >
 std::string Fill(const Args &... args) {
   std::ostringstream sstr;
   int i = 0;
