@@ -1,3 +1,3 @@
 #include "random.h"
-#include "str.h"
+#include "sstr.h"
 #include "time.h"

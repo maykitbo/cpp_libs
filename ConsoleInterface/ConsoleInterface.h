@@ -11,6 +11,7 @@
 #include <vector>
 #include <functional>
 #include <limits>
+#include <sstream>
 
 class Menu;
 class Option;

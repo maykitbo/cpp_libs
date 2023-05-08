@@ -3,7 +3,6 @@
 #include <chrono>
 #include <functional>
 #include <vector>
-#include <type_traits>
 
 namespace s21 {
 
