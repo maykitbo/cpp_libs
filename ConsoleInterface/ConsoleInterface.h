@@ -6,7 +6,7 @@
 #include <functional>
 #include <tuple>
 #include <memory>
-
+#include <sstream>
 #include "Style.h"
 #include <vector>
 #include <limits>
