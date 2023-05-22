@@ -11,7 +11,7 @@ struct Style {
     inline static std::string home_word = "home";
 
     static void InputRequest(int count, const std::string &request) {
-        std::cout << request_color << (count == 1 ? "Enter " : "Enter separated by a space ")\
+        std::cout << request_color << (count == 1 ? "Enter " : "Enter separated by a space: ")\
             << request << " or '" << exit_word << " or '" << home_word << "'\n" << default_color;
     }
 
