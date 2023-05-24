@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <initializer_list>
 
 struct Style {
     inline static std::string error_color = "\033[0;31m";
@@ -10,9 +11,14 @@ struct Style {
     inline static std::string exit_word = "exit";
     inline static std::string home_word = "home";
 
-    static void InputRequest(int count, const std::string &request) {
-        std::cout << request_color << (count == 1 ? "Enter " : "Enter separated by a space: ")\
-            << request << " or '" << exit_word << " or '" << home_word << "'\n" << default_color;
+    static void InputRequest(const std::initializer_list<std::string> &requests) {
+        std::cout << request_color << (requests.size() > 1 ? "Enter separated by a space: " : "Enter: ");
+        auto iter = requests.begin();
+        std::cout << *iter;
+        while (++iter != requests.end()) {
+            std::cout << "; " << *iter;
+        }
+        std::cout << " or '" << exit_word << " or '" << home_word << "'\n" << default_color;
     }
 
     static void MenuRequest() {
@@ -21,6 +27,8 @@ struct Style {
     }
 
     static void ErrorPrint(const std::string &error) {
-        std::cout << error_color << "Incorrect input: \"" << error << "\". Please try again\n" << default_color;
+        std::cout << error_color << "Error: \"" << error << "\". Please try again\n" << default_color;
     }
+
+    private:
 };
