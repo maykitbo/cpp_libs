@@ -102,7 +102,7 @@ T Input::Read() {
             if (!(iss >> value)) {
                 std::cin.clear();
                 std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                throw std::runtime_error(word);
+                throw std::runtime_error(Style::IncorrectInput(word));
             }
             return value;
         }

@@ -30,5 +30,9 @@ struct Style {
         std::cout << error_color << "Error: \"" << error << "\". Please try again\n" << default_color;
     }
 
+    static std::string IncorrectInput(const std::string &input) {
+        return "incorrect input " + input;
+    }
+
     private:
 };

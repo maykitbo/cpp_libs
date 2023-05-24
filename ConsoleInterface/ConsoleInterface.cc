@@ -80,7 +80,7 @@ void Menu::Action() {
                 Action();
             }
         } else {
-            Style::ErrorPrint(input);
+            Style::ErrorPrint(Style::IncorrectInput(input));
             Action();
         }
     }
