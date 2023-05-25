@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <list>
+#include <sstream>
 
 #include "Style.h"
 #include <vector>
