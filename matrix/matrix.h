@@ -51,23 +51,31 @@ class Matrix {
         }
 
         Matrix() noexcept : rows_(0), cols_(0) {}
+
         Matrix(int rows, int cols) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]()) {}
+
         Matrix(int square) : rows_(square), cols_(square), matrix_(new T[square * square]()) {}
+
         Matrix(int rows, int cols, const T &value) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value; });
         }
+
         Matrix(int rows, int cols, std::function<const T(void)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value_func(); });
         }
+
         Matrix(int rows, int cols, std::function<void(T&)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
             Loop([&] (int k, int g) { value_func(matrix_[k * cols_ + g]); });
         }
+
         Matrix(int rows, int cols, std::function<void(T&, int, int)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
             Loop([&] (int k, int g) { value_func(matrix_[k * cols_ + g], k, g); });
         }
+
         Matrix(const Matrix &other) : rows_(other.rows_), cols_(other.cols_), matrix_(new T[other.rows_ * other.cols_]) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = other(k, g); });
         }
+
         Matrix(std::initializer_list<std::initializer_list<T>> const &items) :
                 rows_(items.size()), cols_(items.begin()->size()), matrix_(new T[items.size() * items.begin()->size()]) {
             int k = 0;
@@ -79,6 +87,7 @@ class Matrix {
                 ++k;
             }
         }
+
         Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), matrix_(std::move(other.matrix_)) {
             other.matrix_ = nullptr;
             other.rows_ = 0;
@@ -88,10 +97,12 @@ class Matrix {
         RowProxy operator[](size_t row) {
             return RowProxy(*this, row);
         }
+
         T &operator()(size_t row, size_t col) {
             row_col_error(row, col, "operator()");
             return matrix_[row * cols_ + col];
         }
+
         const T &operator()(size_t row, size_t col) const {
             row_col_error(row, col, "const operator()");
             return matrix_[row * cols_ + col];
@@ -109,9 +120,11 @@ class Matrix {
             }
             *this = std::move(new_matrix);
         }
+
         void ResizeRows(size_t new_rows) {
             Resize(new_rows, cols_);
         }
+
         void ResizeCols(size_t new_cols) {
             Resize(rows_, new_cols);
         }
@@ -125,6 +138,7 @@ class Matrix {
             }
             return *this;
         }
+
         Matrix& operator=(Matrix&& other) noexcept {
             std::swap(rows_, other.rows_);
             std::swap(cols_, other.cols_);
@@ -139,6 +153,7 @@ class Matrix {
                 std::swap(matrix_[row1 * cols_ + col], matrix_[row2 * cols_ + col]);
             }
         }
+
         void SwapCols(int col1, int col2) {
             if (col1 >= cols_ || col1 < 0 || col2 >= cols_ || col2 < 0) error("SwapCols");
             if (col1 == col2) return;
@@ -150,9 +165,11 @@ class Matrix {
         void ForEach(std::function<void(const T&)> func) const {
             Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
         }
+
         void ForEach(std::function<void(const T&)> func) {
             Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
         }
+
         void Fill(std::function<void(T&)> func) {
             Loop([&] (int k, int g) { func(matrix_[k * cols_ + g]); });
         }
@@ -161,13 +178,16 @@ class Matrix {
             row_col_error(row, col, "Get");
             return matrix_[row * cols_ + col];
         }
+
         void Set(int row, int col, T value) {
             row_col_error(row, col, "Set");
             matrix_[row * cols_ + col] = value;
         }
+
         size_t GetRows() const {
             return rows_;
         }
+
         size_t GetCols() const {
             return cols_;
         }
@@ -176,10 +196,12 @@ class Matrix {
         Matrix operator*(const Mul num) const {
             return Matrix(rows_, cols_, [&] (T &cell, int k, int g) { cell = matrix_[k * cols_ + g] * num; });
         }
+
         template<class Mul>
         void operator*=(const Mul num) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] *= num; });
         }
+
         Matrix operator*(Matrix &other) const {
             if (cols_ != other.rows_) error("Mul");
             return Matrix(rows_, other.cols_, [&] (T &cell, int k, int g) {
@@ -189,26 +211,31 @@ class Matrix {
                 }
             });
         }
+
         void operator*=(Matrix &other) {
             auto temp = *this;
             *this = temp * other;
         }
+
         Matrix operator+(Matrix &other) const {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
             return Matrix(rows_, cols_, [&] (T &cell, int k, int g) {
                 cell = matrix_[k * cols_ + g] + other(k, g);
             });
         }
+
         void operator+=(Matrix &other) {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sum");
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] += other(k, g); });
         }
+
         Matrix operator-(Matrix &other) const {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sub");
             return Matrix(rows_, cols_, [&] (T &cell, int k, int g) {
                 cell = matrix_[k * cols_ + g] - other(k, g);
             });
         }
+
         void operator-=(Matrix &other) {
             if (rows_ != other.rows_ || cols_ != other.cols_) error("Sub");
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] -= other(k, g); });
@@ -219,6 +246,7 @@ class Matrix {
                 cell = matrix_[g * cols_ + k];
             });
         }
+
         void TransposeThis() {
             auto temp = *this;
             *this = temp.Transpose();
@@ -298,7 +326,7 @@ class Matrix {
         friend std::ostream& operator<<(std::ostream& os, const Matrix<T>& m) {
             for (int i = 0; i < m.rows_; ++i) {
                 for (int j = 0; j < m.cols_; ++j) {
-                    os << (int)m(i, j) << '\t';
+                    os << m(i, j) << '\t';
                 }
                 os << "\n";
             }
