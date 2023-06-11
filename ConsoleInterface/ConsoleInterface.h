@@ -4,8 +4,9 @@
 #include <initializer_list>
 #include <list>
 #include <functional>
-#include <tuple>
 #include <memory>
+#include <list>
+#include <sstream>
 
 #include "Style.h"
 #include <vector>
@@ -19,6 +20,7 @@ class AbsMenu {
     protected:
         std::string name_;
         ConsoleInterface *ci_;
+
     public:
         virtual void Action() = 0;
         AbsMenu(const std::string &name, ConsoleInterface *ci);
@@ -27,25 +29,22 @@ class AbsMenu {
         void GoHome();
 };
 
-template<class ...Args>
 class Input : public AbsMenu {
-    friend class Menu;
-
     public:
-        Input(const std::string &request, ConsoleInterface *ci,
-                const std::function<void(Args&...)> &action,
-                AbsMenu *next_menu, const std::string &name = "");
+        Input(ConsoleInterface *ci, AbsMenu *next_menu, const std::string &name = "");
+        virtual ~Input() = default;
 
+    protected:
         void Action() override;
+        virtual void Func() = 0;
 
-    private:
-        std::function<void(Args&...)> action_;
-        AbsMenu *next_menu_;
-        bool exit_ = false, home_ = false;
-        std::string request_;
-
-        template<class T>
+        template <class T>
         T Read();
+        bool Allowed();
+    
+    private:
+        bool exit_ = false, home_ = false;
+        AbsMenu *next_menu_;
 };
 
 class Menu : public AbsMenu {
@@ -79,15 +78,9 @@ class ConsoleInterface {
         ConsoleInterface() {}
 
         Menu *AddMenu(const std::initializer_list<std::string> &options, const std::string &name = "");
-
-        template<class ...Args, class Func>
-        AbsMenu *AddInput(const std::string &request, const Func &action, AbsMenu *next_menu) {
-            menus_.emplace_back(std::unique_ptr<AbsMenu>(new Input<Args...>(request, this, std::function<void(Args&...)>(action), next_menu)));
-            // return dynamic_cast<Input<Args...>*>(menus_.back().get());
-            return menus_.back().get();
-        }
-
+        AbsMenu *AddInput(Input *input);
         void Start();
+        virtual ~ConsoleInterface() = default;
 
     private:
         friend AbsMenu;
@@ -95,54 +88,47 @@ class ConsoleInterface {
 };
 
 
-
-
-template<class ...Args>
-Input<Args...>::Input(const std::string &request, ConsoleInterface *ci,
-        const std::function<void(Args&...)> &action,
-        AbsMenu *next_menu, const std::string &name) :
-        AbsMenu(name, ci), action_(std::move(action)), next_menu_(next_menu), request_(request) {}
-
-template<class ...Args>
-void Input<Args...>::Action() {
-    std::cout << GetName() << '\n'; 
-    Style::InputRequest(sizeof...(Args), request_);
-    try {
-        auto args = std::make_tuple((!exit_ && !home_ ? Read<Args>() : Args())...);
-        if (exit_) {
-            exit_ = false;
-        } else if (home_) {
-            home_ = false;
-            GoHome();
+template <class T>
+T Input::Read() {
+    if (Allowed()) {
+        std::string word;
+        std::cin >> word;
+        T value;
+        if (word == Style::exit_word) {
+            exit_ = true;
+        } else if (word == Style::home_word) {
+            home_ = true;
         } else {
-            std::apply(action_, args);
-            next_menu_->Action();
+            std::istringstream iss(word);
+            if (!(iss >> value)) {
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                throw std::runtime_error(Style::IncorrectInput(word));
+            }
+            return value;
         }
-    } catch (const std::exception &e) {
-        Style::ErrorPrint(e.what());
-        Action();
     }
+    return T();
 }
 
-template<class ...Args>
 template<class T>
-T Input<Args...>::Read() {
-    std::string word;
-    std::cin >> word;
-    T value;
-    if (word == Style::exit_word) {
-        exit_ = true;
-    } else if (word == Style::home_word) {
-        home_ = true;
-    } else {
-        std::istringstream iss(word);
-        if (!(iss >> value)) {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            throw std::runtime_error(word);
+class OneValueInput : public Input {
+    public:
+        OneValueInput(ConsoleInterface *ci, AbsMenu *next_menu,
+                std::function<void(T&)> func, const std::string request,
+                const std::string &name = "") :
+            Input(ci, next_menu, name), request_(request), func_(func) {}
+        
+        void Func() override {
+            Style::InputRequest({request_});
+            T value = Read<T>();
+            if (Allowed()) {
+                func_(value);
+            }
         }
-    }
-    return value;
-}
-
+        
+    private:
+        std::string request_;
+        std::function<void(T&)> func_;
+};
 
