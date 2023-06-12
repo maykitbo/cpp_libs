@@ -16,9 +16,18 @@ public:
 
   template<class F, class... Args>
   void AddTask(F&& f, Args&&... args) {
-    std::unique_lock<std::mutex> lock(queueMutex);
-    tasks.emplace([=] {f(args...);});
+    {
+      std::unique_lock<std::mutex> lock(queueMutex);
+      tasks.emplace([=] { f(args...); });
+    }
+    condition.notify_one();
+  }
 
+  void AddTask(std::function<void()> f) {
+    {
+      std::unique_lock<std::mutex> lock(queueMutex);
+      tasks.push(f);
+    }
     condition.notify_one();
   }
 
@@ -28,12 +37,14 @@ private:
   void ThreadRun() {
     std::function<void()> task;
     while (true) {
-      std::unique_lock<std::mutex> lock(queueMutex);
-      condition.wait(lock, [this] {return stopped || !tasks.empty();});
-      if (stopped && tasks.empty())
-        return;
-      task = std::move(tasks.front());
-      tasks.pop();
+      {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        condition.wait(lock, [this] { return stopped || !tasks.empty(); });
+        if (stopped && tasks.empty())
+          return;
+        task = std::move(tasks.front());
+        tasks.pop();
+      }
       try {
         task();
       } catch (std::runtime_error &ex) {
