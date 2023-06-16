@@ -1,4 +1,4 @@
-all: test speed
+all: test #speed
 
 speed:
 	g++ speed_test.cc -o speed -lblas -lOpenCL -lclBLAS

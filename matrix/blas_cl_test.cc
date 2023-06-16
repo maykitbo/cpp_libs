@@ -30,9 +30,9 @@ TEST(compare, constructor) {
 
 TEST(compare, mul) {
     CL::Matrix<float> CM(2, 1);
-    CL::Arithmetic::Mul(CL::Matrix<float>{{1, 2, 3, 4}, {5, 6, 7, 8}}, CL::Matrix<float>{{11}, {22}, {33}, {44}}, CM);
+    CL::Arithmetic::Mul<float>(CL::Matrix<float>{{1, 2, 3, 4}, {5, 6, 7, 8}}, CL::Matrix<float>{{11}, {22}, {33}, {44}}, CM);
     BLAS::Matrix<float> BM(2, 1);
-    BLAS::Arithmetic::Mul(BLAS::Matrix<float>{{1, 2, 3, 4}, {5, 6, 7, 8}}, BLAS::Matrix<float>{{11}, {22}, {33}, {44}}, BM);
+    BLAS::Arithmetic<float>::Mul(BLAS::Matrix<float>{{1, 2, 3, 4}, {5, 6, 7, 8}}, BLAS::Matrix<float>{{11}, {22}, {33}, {44}}, BM);
     Compare(CM, BM);
 }
 
