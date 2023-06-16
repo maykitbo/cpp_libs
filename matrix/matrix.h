@@ -26,7 +26,7 @@ class Matrix {
                 }
         };
 
-        void error(std::string name) const {
+        void error(const std::string& name) const {
             throw std::invalid_argument("Matrix: " + name + " error");
         }
 
@@ -35,14 +35,14 @@ class Matrix {
         }
 
     public:
-        void Loop(std::function<void(int, int)> func) {
+        void Loop(const std::function<void(int, int)>& func) {
             for (int k = 0; k < rows_; ++k) {
                 for (int g = 0; g < cols_; ++g) {
                     func(k, g);
                 }
             }
         }
-        void Loop(std::function<void(int, int)> func) const {
+        void Loop(const std::function<void(int, int)>& func) const {
             for (int k = 0; k < rows_; ++k) {
                 for (int g = 0; g < cols_; ++g) {
                     func(k, g);

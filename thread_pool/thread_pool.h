@@ -16,6 +16,9 @@ namespace s21 {
       }
     }
 
+    ThreadPool(ThreadPool & pool_) = delete;
+    ThreadPool(ThreadPool &&pool_) = default;
+
     ~ThreadPool() {
       if (!stopped) {
         ShutDown();
@@ -29,7 +32,6 @@ namespace s21 {
         std::unique_lock<std::mutex> lock(queueMutex);
         tasks.push(f);
         ++active;
-        std::cout << active << std::endl;
       }
       condition.notify_one();
     }
@@ -70,7 +72,7 @@ namespace s21 {
         }
         if (active)
           --active;
-        std::cout << active << std::endl;
+
         condition.notify_all();
       }
     }
