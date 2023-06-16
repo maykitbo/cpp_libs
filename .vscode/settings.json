@@ -67,6 +67,7 @@
         "fstream": "cpp",
         "bitset": "cpp",
         "span": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "codecvt": "cpp"
     }
 }
