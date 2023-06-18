@@ -11,7 +11,7 @@ namespace Random {
 
 template <class Type, class Distribution, class Engine, class... Args>
 Type Full(Args &&...args) {
-  static thread_local Engine generator{std::random_device{}()};
+  static Engine generator{std::random_device{}()};
   static thread_local std::map<std::tuple<std::decay_t<Args>...>, Distribution>distributions;
 
   return distributions.emplace(std::tie(args...), Distribution(args...)).first->second(generator);
