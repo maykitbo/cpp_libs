@@ -37,6 +37,7 @@ int64_t Test(std::function<void(void)> test_func, int N = 1) {
     return Duration<Unit>(time_point) / (int64_t)N; 
 }
 
+// template<typename... Args, typename = std::enable_if_t<std::conjunction_v<std::is_same<Args, std::function<void(void)>>...>>>
 template<class Unit = ms, class ...Args>
 std::vector<int64_t> Compare(int N, Args ...functions) {
     std::vector<int64_t> result(sizeof...(Args));
