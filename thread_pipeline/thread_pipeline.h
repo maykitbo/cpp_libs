@@ -36,7 +36,7 @@ private:
     while (true) {
       std::unique_lock<std::mutex> lock(mtx);
       cv.wait(lock, [this] { return is_finished || !task_queue.empty(); });
-      if (is_finished) {
+      if (is_finished && task_queue.empty()) {
         return;
       }
       T& data = task_queue.front();
@@ -48,6 +48,7 @@ private:
       }
     }
   }
+
 
   void Finish() {
     {
@@ -78,7 +79,10 @@ template <typename T>
   public:
     Pipeline() = default;
     ~Pipeline() {
+      while (first) {
         delete first;
+        first = first->GetNext();
+      }
     }
 
     void AddStage(std::function<void(int &)> func_, std::function<bool(T&)> check = [](T&){return true;}) {
