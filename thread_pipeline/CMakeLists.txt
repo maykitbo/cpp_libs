@@ -10,8 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES
         thread_pipeline.h
-        thread_pipeline.cc
-)
+        )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
