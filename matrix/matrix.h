@@ -36,8 +36,8 @@ class Matrix {
 
     public:
         void Loop(const std::function<void(int, int)>& func) {
-            for (int k = 0; k < rows_; ++k) {
-                for (int g = 0; g < cols_; ++g) {
+            for (size_t k = 0; k < rows_; ++k) {
+                for (unsigned long g = 0; g < cols_; ++g) {
                     func(k, g);
                 }
             }
@@ -60,7 +60,7 @@ class Matrix {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value; });
         }
 
-        Matrix(int rows, int cols, std::function<const T(void)> value_func) : rows_(rows), cols_(cols), matrix_(new T[rows * cols]) {
+        Matrix(int rows, int cols, std::function<const T(void)> value_func) : matrix_(new T[rows * cols]), rows_(rows), cols_(cols) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = value_func(); });
         }
 
@@ -72,7 +72,7 @@ class Matrix {
             Loop([&] (int k, int g) { value_func(matrix_[k * cols_ + g], k, g); });
         }
 
-        Matrix(const Matrix &other) : rows_(other.rows_), cols_(other.cols_), matrix_(new T[other.rows_ * other.cols_]) {
+        Matrix(const Matrix &other) : matrix_(new T[other.rows_ * other.cols_]), rows_(other.rows_), cols_(other.cols_) {
             Loop([&] (int k, int g) { matrix_[k * cols_ + g] = other(k, g); });
         }
 

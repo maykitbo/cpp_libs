@@ -27,10 +27,10 @@ struct SStr {
   template <const char Delimiter = '\n', class... Args >
   static void Print(const Args &... args) {
     int i = 0;
-    ([&] (const auto &arg) {
+    ([&] () {
       Print(std::cout, args);
       std::cout << (++i == sizeof...(args) ? '\0' : Delimiter);
-    } (args), ...);
+    }(),...);
   }
 
   struct PrintStyle {

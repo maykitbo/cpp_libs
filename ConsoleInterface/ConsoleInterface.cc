@@ -62,7 +62,7 @@ Menu::Menu(const std::initializer_list<std::string> &options, const std::string 
 
 void Menu::Action() {
     std::cout << name_ << '\n';
-    for (int k = 0; k < options_.size(); ++k) {
+    for (unsigned long k = 0; k < options_.size(); ++k) {
         std::cout << k + 1 << ": " << options_[k].name_ << '\n';
     }
     Style::MenuRequest();
@@ -72,7 +72,7 @@ void Menu::Action() {
         GoHome();
     } else if (input != "exit") {
         int choice = std::atoi(input.data());
-        if (choice > 0 && choice <= options_.size()) {
+        if (choice > 0 && (unsigned long)choice <= options_.size()) {
             try {
                 options_[choice - 1]();
             } catch (std::exception &e) {
