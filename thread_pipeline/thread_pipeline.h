@@ -117,6 +117,13 @@ public:
   // Конструктор класса Pipeline
   Pipeline() = default;
 
+  // Запрещаем копирование и перемещение объектов Pipeline
+  Pipeline(Pipeline &other) = delete;
+  Pipeline(Pipeline &&other) = delete;
+  Pipeline& operator=(Pipeline &other) = delete;
+  Pipeline& operator=(Pipeline &&other) = delete;
+
+
   // Деструктор класса Pipeline
   ~Pipeline() noexcept {
     while (first) {
@@ -128,7 +135,7 @@ public:
   // Добавление нового этапа в конвейер
   void AddStage(const func_type func_, const check_type check = nullptr) {
     auto *new_element = new PipelineElement(func_, check);
-    if (first == nullptr) {
+  if (!first) {
       first = new_element;
       last = new_element;
     } else {
@@ -139,7 +146,7 @@ public:
 
   // Обработка данных в конвейере
   void Process(T& data) {
-    if (first != nullptr)
+    if (first)
       first->Process(data);
   }
 
