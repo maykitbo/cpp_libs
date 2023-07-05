@@ -7,104 +7,143 @@
 #include <vector>
 #include <iostream>
 
+
+
 template <typename T>
-class PipelineElement {
+class Pipeline {
   using func_type = std::function<void(T&)>;
-public:
-  PipelineElement() = delete;
-  PipelineElement(func_type f, std::function<bool(T&)> ch) : func(f), check(ch) {
-     t = new std::thread(&PipelineElement::Worker, this);
-//    t.detach();
-  }
-  ~PipelineElement() {
-    delete next;
-    Finish();
+  using check_type = std::function<bool(T&)>;
 
-  }
+  class PipelineElement {
+  public:
 
-  void Process(T& data) {
-    if (check(data)) {
-      task_queue.push(data);
-      cv.notify_one();
+    // Удаляем конструктор по умолчанию
+    PipelineElement() = delete;
+
+    // Конструктор копирования
+    PipelineElement(PipelineElement const& other) {
+      func = other.func;
+      check = other.check;
+      t = new std::thread(&PipelineElement::Worker, this);
     }
-  }
 
-  void SetNext(PipelineElement * elem) { next = elem;}
-  PipelineElement* GetNext() { return next; }
+    // Оператор присваивания копированием
+    PipelineElement& operator=(PipelineElement const& other) {
+      if (this == &other)
+        return *this;
+      this = new PipelineElement(other);
+      return *this;
+    }
 
-private:
-  void Worker() {
-    while (true) {
-      std::unique_lock<std::mutex> lock(mtx);
-      cv.wait(lock, [this] { return is_finished || !task_queue.empty(); });
-      if (is_finished && task_queue.empty()) {
-        return;
-      }
-      T& data = task_queue.front();
-      task_queue.pop();
-      lock.unlock();
-      func(data);
-      if (next != nullptr) {
+    // Запрещаем перемещение объектов PipelineElement
+    PipelineElement& operator=(PipelineElement && other) = delete;
+    PipelineElement(PipelineElement && other) = delete;
+
+    // Конструктор класса PipelineElement
+    PipelineElement(const func_type f, const check_type ch) : func(f), check(ch) {
+      t = new std::thread(&PipelineElement::Worker, this);
+    }
+
+    // Деструктор класса PipelineElement
+    ~PipelineElement() noexcept {
+      delete next;
+      Finish();
+      delete t;
+    }
+
+    // Обработка данных в элементе конвейера
+    void Process(T& data) {
+      if (!check || check(data)) {
+        task_queue.push(data);
+        cv.notify_one();
+      } else if (next) {
         next->Process(data);
       }
     }
-  }
 
+    // Установка следующего элемента конвейера
+    void SetNext(PipelineElement * elem) { next = elem; }
 
-  void Finish() {
-    {
-      std::unique_lock<std::mutex> lock(mtx);
-      is_finished = true;
-    }
-    cv.notify_all();
-    t->join();
-    delete t;
-
-  }
-
-
-  func_type func;
-  PipelineElement* next;
-  std::function<bool(T&)> check;
-  std::queue<std::reference_wrapper<T>> task_queue;
-  std::condition_variable cv;
-  std::mutex mtx;
-  bool is_finished = false;
-  std::thread* t;
-};
-
-template <typename T>
-  class Pipeline {
-    using PipelineFunction = std::function<void(T&)>;
-
-  public:
-    Pipeline() = default;
-    ~Pipeline() {
-      while (first) {
-        delete first;
-        first = first->GetNext();
-      }
-    }
-
-    void AddStage(std::function<void(int &)> func_, std::function<bool(T&)> check = [](T&){return true;}) {
-      auto *new_element = new PipelineElement<T>(func_, check);
-      if (first == nullptr) {
-        first = new_element;
-        last = new_element;
-      } else {
-        last->SetNext(new_element);
-        last = new_element;
-      }
-    }
-
-    void Process(T& data)
-    {
-      if (first != nullptr) {
-        first->Process(data);
-      }
-    }
+    // Получение указателя на следующий элемент конвейера
+    inline PipelineElement* GetNext() noexcept { return next; }
 
   private:
-    PipelineElement<T> *first;
-    PipelineElement<T> *last;
+    // Рабочая функция элемента конвейера
+    void Worker() {
+      while (true) {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [this] { return is_finished || !task_queue.empty(); });
+        if (is_finished && task_queue.empty()) {
+          return;
+        }
+        T& data = task_queue.front();
+        task_queue.pop();
+        lock.unlock();
+        try {
+          func(data);
+        } catch (std::exception& e) {
+          std::cerr << e.what() << std::endl;
+          continue;
+        }
+
+        if (next != nullptr) {
+          next->Process(data);
+        }
+      }
+    }
+
+    // Завершение работы элемента конвейера
+    void Finish() {
+      {
+        std::unique_lock<std::mutex> lock(mtx);
+        is_finished = true;
+      }
+      cv.notify_all();
+      t->join();
+      delete t;
+    }
+
+    func_type func;
+    PipelineElement* next;
+    check_type check;
+    std::queue<std::reference_wrapper<T>> task_queue;
+    std::condition_variable cv;
+    std::mutex mtx;
+    bool is_finished = false;
+    std::thread* t;
   };
+
+public:
+  // Конструктор класса Pipeline
+  Pipeline() = default;
+
+  // Деструктор класса Pipeline
+  ~Pipeline() noexcept {
+    while (first) {
+      delete first;
+      first = first->GetNext();
+    }
+  }
+
+  // Добавление нового этапа в конвейер
+  void AddStage(const func_type func_, const check_type check = nullptr) {
+    auto *new_element = new PipelineElement(func_, check);
+    if (first == nullptr) {
+      first = new_element;
+      last = new_element;
+    } else {
+      last->SetNext(new_element);
+      last = new_element;
+    }
+  }
+
+  // Обработка данных в конвейере
+  void Process(T& data) {
+    if (first != nullptr)
+      first->Process(data);
+  }
+
+private:
+  PipelineElement *first;
+  PipelineElement *last;
+};
