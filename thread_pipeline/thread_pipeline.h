@@ -30,6 +30,7 @@ public:
   }
 
   void SetNext(PipelineElement * elem) { next = elem;}
+  PipelineElement* GetNext() { return next; }
 
 private:
   void Worker() {
