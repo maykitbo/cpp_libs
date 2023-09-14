@@ -75,8 +75,8 @@ struct SStr {
         return false;
       }
 
-      static constexpr bool value = is_container_helper<T>(nullptr);
-    };
+    static constexpr bool value = is_container_helper<T>(nullptr);
+  };
 
     template <class Container>
     static typename std::enable_if<is_container<Container>::value, void>::type
@@ -119,7 +119,7 @@ struct SStr {
       PrintP(p.second);
       PrintStyle::stream << "]";
     }
-  
+
   public:
 
     static std::string RelativePath(const char *FILE, const std::string &path_from_source) {
