@@ -19,6 +19,7 @@ namespace s21 {
     }
 
     ThreadPool(ThreadPool & pool_) = delete;
+
     ThreadPool(ThreadPool &&pool_) = delete;
 
     ~ThreadPool() {

@@ -11,18 +11,25 @@ void print(int& a) {
 }
 
 int main() {
-  std::cout << "ok1" << std::endl;
-  Pipeline<int> pipe{};
-  std::cout << "ok2" << std::endl;
 
+  // создаем экземпляр
+  Pipeline<int> pipe{};
+
+  //добавляем 1 функцию в конвейер
   std::function<void(int&)> func = a_func;
   pipe.AddStage(func);
-  std::function<void(int&)> func2 = print;
 
+  //добавляем 2 функцию в конвейер
+  std::function<void(int&)> func2 = print;
   pipe.AddStage(func2);
+
+  //создаем переменную и запускаем конвейер
   int a = 89;
   pipe.Process(a);
-//  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  //сон чтобы главный поток не завершился раньше времени
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
   return 0;
 }
 
