@@ -11,13 +11,13 @@
 
 class ThreadManager {
     public:
-        ThreadManager(int thread_count);
+        ThreadManager(unsigned thread_count);
         void ShutDown();
         void Execute(const std::function<void(int)> &func);
         void LoopExecute(int loop_count, const std::function<void(int)> &func);
         ~ThreadManager() { ShutDown(); }
 
-        static std::function<void(int)> LoopThreads(int thread_count, int loop_k, const std::function<void(int)> &func);
+        static std::function<void(int)> LoopThreads(unsigned thread_count, int loop_k, const std::function<void(int)> &func);
         static void DispThreads(int thread_count, const std::function<void(int)> &func);
     
     private:

@@ -1,6 +1,6 @@
 #include "m_thread.h"
 
-ThreadManager::ThreadManager(int thread_count) : ready_(thread_count), thread_count_(thread_count) {
+ThreadManager::ThreadManager(unsigned thread_count) : ready_(thread_count), thread_count_(thread_count) {
     std::fill(ready_.begin(), ready_.end(), false);
     for (int thc = 0; thc < thread_count; ++thc) {
         threads_.emplace_back([&, thc, thread_count] {
@@ -38,7 +38,7 @@ void ThreadManager::ShutDown() {
         thread.join();
     }
 }
-
+ч
 void ThreadManager::Run() {
     std::fill(ready_.begin(), ready_.end(), true);
     cv_.notify_all();      
@@ -71,7 +71,7 @@ void ThreadManager::DispThreads(int thread_count, const std::function<void(int)>
     }
 }
 
-std::function<void(int)> ThreadManager::LoopThreads(int thread_count, int loop_k, const std::function<void(int)> &func) {
+std::function<void(int)> ThreadManager::LoopThreads(unsigned thread_count, int loop_k, const std::function<void(int)> &func) {
     return  [=, &func] (int thc) {
         int delta = loop_k / thread_count;
         int end = (thc == thread_count - 1 ? loop_k : (thc + 1) * delta);
