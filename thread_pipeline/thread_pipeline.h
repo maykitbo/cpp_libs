@@ -6,6 +6,8 @@
 #include <queue>
 #include <thread>
 #include <vector>
+#include <condition_variable>
+#include <mutex>
 
 template <typename T>
 class Pipeline {
@@ -45,7 +47,7 @@ class Pipeline {
     ~PipelineElement() noexcept {
       delete next;
       Finish();
-      delete t;
+//      delete t;
     }
 
     // Обработка данных в элементе конвейера
@@ -122,9 +124,8 @@ class Pipeline {
 
   // Деструктор класса Pipeline
   ~Pipeline() noexcept {
-    while (first) {
+    if (first) {
       delete first;
-      first = first->GetNext();
     }
   }
 

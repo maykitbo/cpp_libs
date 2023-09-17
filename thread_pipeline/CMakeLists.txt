@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES
         thread_pipeline.h
+        dummy.cc
         )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
@@ -19,11 +20,9 @@ add_executable(thread_pipeline_test
         test.cc)
 
 
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
         OUTPUT_NAME thread_pipeline
         PREFIX ""
         )
-
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
