@@ -1,17 +1,12 @@
-#include "thread_pipeline.h"
-
 #include <iostream>
 
-void a_func(int& a) {
-  a+=1;
-}
+#include "thread_pipeline.h"
 
-void print(int& a) {
-  std::cout << a << std::endl;
-}
+void a_func(int& a) { a += 1; }
+
+void print(int& a) { std::cout << a << std::endl; }
 
 int main() {
-
   // создаем экземпляр
   Pipeline<int> pipe{};
 
@@ -32,8 +27,3 @@ int main() {
 
   return 0;
 }
-
-
-
-
-

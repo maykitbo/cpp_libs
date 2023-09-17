@@ -1,13 +1,11 @@
 #pragma once
 
+#include <any>
 #include <functional>
+#include <iostream>
 #include <queue>
 #include <thread>
-#include <any>
 #include <vector>
-#include <iostream>
-
-
 
 template <typename T>
 class Pipeline {
@@ -15,8 +13,7 @@ class Pipeline {
   using check_type = std::function<bool(T&)>;
 
   class PipelineElement {
-  public:
-
+   public:
     // Удаляем конструктор по умолчанию
     PipelineElement() = delete;
 
@@ -29,18 +26,18 @@ class Pipeline {
 
     // Оператор присваивания копированием
     PipelineElement& operator=(PipelineElement const& other) {
-      if (this == &other)
-        return *this;
+      if (this == &other) return *this;
       this = new PipelineElement(other);
       return *this;
     }
 
     // Запрещаем перемещение объектов PipelineElement
-    PipelineElement& operator=(PipelineElement && other) = delete;
-    PipelineElement(PipelineElement && other) = delete;
+    PipelineElement& operator=(PipelineElement&& other) = delete;
+    PipelineElement(PipelineElement&& other) = delete;
 
     // Конструктор класса PipelineElement
-    PipelineElement(const func_type f, const check_type ch) : func(f), check(ch) {
+    PipelineElement(const func_type f, const check_type ch)
+        : func(f), check(ch) {
       t = new std::thread(&PipelineElement::Worker, this);
     }
 
@@ -62,12 +59,12 @@ class Pipeline {
     }
 
     // Установка следующего элемента конвейера
-    void SetNext(PipelineElement * elem) { next = elem; }
+    void SetNext(PipelineElement* elem) { next = elem; }
 
     // Получение указателя на следующий элемент конвейера
     inline PipelineElement* GetNext() noexcept { return next; }
 
-  private:
+   private:
     // Рабочая функция элемента конвейера
     void Worker() {
       while (true) {
@@ -113,16 +110,15 @@ class Pipeline {
     std::thread* t;
   };
 
-public:
+ public:
   // Конструктор класса Pipeline
   Pipeline() = default;
 
   // Запрещаем копирование и перемещение объектов Pipeline
-  Pipeline(Pipeline &other) = delete;
-  Pipeline(Pipeline &&other) = delete;
-  Pipeline& operator=(Pipeline &other) = delete;
-  Pipeline& operator=(Pipeline &&other) = delete;
-
+  Pipeline(Pipeline& other) = delete;
+  Pipeline(Pipeline&& other) = delete;
+  Pipeline& operator=(Pipeline& other) = delete;
+  Pipeline& operator=(Pipeline&& other) = delete;
 
   // Деструктор класса Pipeline
   ~Pipeline() noexcept {
@@ -134,8 +130,8 @@ public:
 
   // Добавление нового этапа в конвейер
   void AddStage(const func_type func_, const check_type check = nullptr) {
-    auto *new_element = new PipelineElement(func_, check);
-  if (!first) {
+    auto* new_element = new PipelineElement(func_, check);
+    if (!first) {
       first = new_element;
       last = new_element;
     } else {
@@ -146,11 +142,10 @@ public:
 
   // Обработка данных в конвейере
   void Process(T& data) {
-    if (first)
-      first->Process(data);
+    if (first) first->Process(data);
   }
 
-private:
-  PipelineElement *first;
-  PipelineElement *last;
+ private:
+  PipelineElement* first;
+  PipelineElement* last;
 };
