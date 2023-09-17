@@ -38,7 +38,7 @@ void ThreadManager::ShutDown() {
         thread.join();
     }
 }
-ч
+
 void ThreadManager::Run() {
     std::fill(ready_.begin(), ready_.end(), true);
     cv_.notify_all();      

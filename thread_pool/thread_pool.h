@@ -4,6 +4,7 @@
 #include <queue>
 #include <iostream>
 #include <map>
+#include <chrono>
 
 namespace s21 {
 
@@ -69,7 +70,7 @@ namespace s21 {
           if (stopped && tasks.empty()) {
             return;
           }
-          ++active;
+          active.fetch_add(1);
           task = std::move(tasks.front());
           tasks.pop();
         }
@@ -80,7 +81,8 @@ namespace s21 {
         }
         if (active)
           active.fetch_sub(1);
-        acv.notify_one();
+        acv.notify_all();
+          std::this_thread::sleep_for(std::chrono::nanoseconds(10));
       }
     }
 
