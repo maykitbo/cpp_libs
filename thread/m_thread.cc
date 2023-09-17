@@ -63,6 +63,7 @@ void ThreadManager::LoopExecute(int loop_count, const std::function<void(int)> &
 
 void ThreadManager::DispThreads(int thread_count, const std::function<void(int)> &func) {
     std::vector<std::thread> threads;
+    threads.reserve(thread_count);
     for (int thc = 0; thc < thread_count; ++thc) {
         threads.emplace_back(func, thc);
     }
