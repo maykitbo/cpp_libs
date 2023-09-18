@@ -44,16 +44,18 @@ class Pipeline {
     }
 
     // Деструктор класса PipelineElement
-    ~PipelineElement() noexcept {
-      delete next;
+    ~PipelineElement() {
       Finish();
-//      delete t;
+      delete next;
     }
 
     // Обработка данных в элементе конвейера
     void Process(T& data) {
       if (!check || check(data)) {
-        task_queue.push(data);
+        {
+          std::unique_lock<std::mutex> lock(mtx);
+          task_queue.push(data);
+        }
         cv.notify_one();
       } else if (next) {
         next->Process(data);
@@ -64,7 +66,7 @@ class Pipeline {
     void SetNext(PipelineElement* elem) { next = elem; }
 
     // Получение указателя на следующий элемент конвейера
-    inline PipelineElement* GetNext() noexcept { return next; }
+    inline PipelineElement* GetNext()  { return next; }
 
    private:
     // Рабочая функция элемента конвейера
@@ -123,7 +125,7 @@ class Pipeline {
   Pipeline& operator=(Pipeline&& other) = delete;
 
   // Деструктор класса Pipeline
-  ~Pipeline() noexcept {
+  ~Pipeline() {
     if (first) {
       delete first;
     }
