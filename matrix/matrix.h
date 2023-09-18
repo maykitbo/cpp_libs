@@ -84,10 +84,16 @@ class Matrix {
 
         void Print(std::ostream &os = std::cout) const;
         void PrintFull(std::ostream &os = std::cout) const;
+        void Read(std::istream &is = std::cin);
+        void ReadFull(std::istream &is = std::cin);
 
         friend std::ostream &operator<<(std::ostream &os, const Matrix &matrix) {
             matrix.Print(os);
             return os;
+        }
+        friend std::istream &operator>>(std::istream &is, Matrix &matrix) {
+            matrix.Read(is);
+            return is;
         }
 
     private:
@@ -486,7 +492,7 @@ template<class T>
 void Matrix<T>::Print(std::ostream &os) const {
     for (i_type i = 0; i < rows_; ++i) {
         for (i_type j = 0; j < cols_; ++j) {
-            os << data_[i * cols_ + j] << ' ';
+            os << data_[i * cols_ + j] << '\t';
         }
         os << '\n';
     }
@@ -494,9 +500,24 @@ void Matrix<T>::Print(std::ostream &os) const {
 
 template<class T>
 void Matrix<T>::PrintFull(std::ostream &os) const {
-    os << rows_ << ' ' << cols_ << '\n';
+    os << rows_ << '\t' << cols_ << '\n';
     Print(os);
 }
+
+template<class T>
+void Matrix<T>::Read(std::istream &is) {
+    for (auto &value : data_) {
+        is >> value;
+    }
+}
+
+template<class T>
+void Matrix<T>::ReadFull(std::istream &is) {
+    is >> rows_ >> cols_;
+    data_.resize(rows_ * cols_);
+    Read(is);
+}
+
 
 template<class T>
 T *Matrix<T>::Data() {
